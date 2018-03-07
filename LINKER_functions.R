@@ -362,8 +362,10 @@ LINKER_LearnRegulatoryPrograms<-function(Data,Clusters,RegulatorData,RegulatorSi
           b_opt[i]<-0
         }
       }
-
-      
+      b_o <- 0
+    }
+    else{
+      print("MODE NOT RECOGNIZED")
     }
     
     #y_all[i,] = y

@@ -685,51 +685,53 @@ LINKER_compute_graph_enrichment_geneSets_graph_list<-function(pathway_genes,grap
 
 LINKER_plot_graphs_topology<-function(graphs)
 {
+  L<-length(graphs)
+  col=c("black","red","blue","green","black","red","blue","green","black","red","blue","green")
+  pch=c(0,2,5,6,18,19,20,1,3,4,7,8)
   
-  col=c("black","red","blue","green", "green", "red", "black")
-  pch=c(0,2,5,6,18,19,20)
   
-  plot(NA,xlab='Degree',ylab='P(Degree)', main = "Network topology",xlim=c(1,5000), ylim=c(1/500000,1))
-  for(i in 1:length(graphs)){
-    if(class(graphs[[i]])=="list"){
-      t<-table(unlist(lapply(graphs[[i]], function(x) degree(x))))
-      points(as.numeric(names(t)),as.numeric(t)/sum(as.numeric(t)),col=col[i], pch = pch[i])
+  par(mfrow=c(3,4))
+  for(idx in 1:length(graphs)){
+    if(class(graphs[[idx]])=="igraph"){
+      t<-table(degree(graphs[[idx]]))
     }
     else{
-      t<-table(degree(graphs[[i]]))
-      points(as.numeric(names(t)),as.numeric(t)/sum(as.numeric(t)), col=col[i], pch = pch[i])
+      t<-table(unlist(lapply(graphs[[idx]], function(x) degree(x))))
     }
+    plot(as.numeric(names(t)),as.numeric(t)/sum(as.numeric(t)), col=col[idx], 
+             pch = 16,log="xy",xlab='Degree',ylab='P(Degree)', main = names(graphs)[idx],xlim=c(1,5000), ylim=c(1/500000,1))
   }
   
-  plot(NA,xlab='Degree',ylab='P(Degree)', main = "linc node topology",xlim=c(1,5000), ylim=c(1/500000,1))
-  for(i in 1:length(graphs)){
-    g<-graphs[[i]]
-    if(class(g)=="list"){
-      t<-table(unlist(unname(lapply(g, function(x) degree(x, V(x)[V(x)$type==1] )))))
-      points(as.numeric(names(t)),as.numeric(t)/sum(as.numeric(t)),col=col[i], pch = pch[i])
+  par(mfrow=c(3,4))
+  for(idx in 1:length(graphs)){
+    if(class(graphs[[idx]])=="igraph"){
+      t<-table(degree(graphs[[idx]], V(graphs[[idx]])[V(graphs[[idx]])$type==0]))
     }
     else{
-      t<-table(degree(g, V(g)[V(g)$type==1]))
-      points(as.numeric(names(t)),as.numeric(t)/sum(as.numeric(t)), col=col[i], pch = pch[i])
+      t<-table(unlist(unname(lapply(graphs[[idx]], function(x) degree(x, V(x)[V(x)$type==0] )))))
     }
+    plot(as.numeric(names(t)),as.numeric(t)/sum(as.numeric(t)), col=col[idx], 
+         pch = 16,log="xy",xlab='Degree',ylab='P(Degree)', main = names(graphs)[idx],xlim=c(1,500), ylim=c(1/500000,1))
   }
   
-  plot(NA,xlab='Degree',ylab='P(Degree)', main = "pc node topology",xlim=c(1,1000), ylim=c(1/1000000,1))
-  for(i in 1:length(graphs)){
-    g<-graphs[[i]]
-    if(class(g)=="list"){
-      t<-table(unlist(unname(lapply(g, function(x) degree(x, V(x)[V(x)$type==0] )))))
-      points(as.numeric(names(t)),as.numeric(t)/sum(as.numeric(t)),col=col[i], pch = pch[i])
+  par(mfrow=c(3,4))
+  for(idx in 1:length(graphs)){
+    if(class(graphs[[idx]])=="igraph"){
+      t<-table(degree(graphs[[idx]], V(graphs[[idx]])[V(graphs[[idx]])$type==1]))
     }
     else{
-      t<-table(degree(g, V(g)[V(g)$type==0]))
-      points(as.numeric(names(t)),as.numeric(t)/sum(as.numeric(t)), col=col[i], pch = pch[i])
+      t<-table(unlist(unname(lapply(graphs[[idx]], function(x) degree(x, V(x)[V(x)$type==1] )))))
     }
+    plot(as.numeric(names(t)),as.numeric(t)/sum(as.numeric(t)), col=col[idx], 
+         pch = 16,log="xy",xlab='Degree',ylab='P(Degree)', main = names(graphs)[idx],xlim=c(1,5000), ylim=c(1/500000,1))
   }
+  
 }
   
 LINKER_plot_GEAs<-function(GEAs)
 {  
+  
+  par()
   plot(1, type="n", xlab="-log(p-value)", ylab="cummulative counts of number of enriched gene sets", xlim=c(-10, -1), ylim=c(0, 50), main="BIOCARTA")
   
   h<-hist(log(GEAs$VBSR$BIOCARTA), plot = FALSE, breaks = 50)
@@ -752,13 +754,33 @@ LINKER_plot_GEAs<-function(GEAs)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="black", type = "b")
   
-  h<-hist(log(GEAs$VBSR_LASSO_MIN$BIOCARTA), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$VBSR_LASSOmin$BIOCARTA), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="red", type = "b")
+  
+  h<-hist(log(GEAs$VBSR_LASSO1se$BIOCARTA), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="blue", type = "b")
   
   h<-hist(log(GEAs$VBSR_LM$BIOCARTA), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="green", type = "b")
+  
+  h<-hist(log(GEAs$LASSO_VBSR$BIOCARTA), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="black", type = "o")
+  
+  h<-hist(log(GEAs$LASSO_LASSOmin$BIOCARTA), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="red", type = "o")
+  
+  h<-hist(log(GEAs$LASSO_LASSO1se$BIOCARTA), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="blue", type = "o")
+  
+  h<-hist(log(GEAs$LASSO_LM$BIOCARTA), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="green", type = "o")
   
   plot(1, type="n", xlab="-log(p-value)", ylab="cummulative counts of number of enriched gene sets", xlim=c(-15, -1), ylim=c(0, 200), main="KEGG")
   
@@ -782,13 +804,36 @@ LINKER_plot_GEAs<-function(GEAs)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="black", type = "b")
   
-  h<-hist(log(GEAs$VBSR_LASSO_MIN$KEGG), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$VBSR_LASSOmin$KEGG), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="red", type = "b")
+  
+  h<-hist(log(GEAs$VBSR_LASSO1se$KEGG), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="blue", type = "b")
   
   h<-hist(log(GEAs$VBSR_LM$KEGG), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="green", type = "b")
+  
+  h<-hist(log(GEAs$LASSO_VBSR$KEGG), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="black", type = "o")
+  
+  h<-hist(log(GEAs$LASSO_LASSOmin$KEGG), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="red", type = "o")
+  
+  h<-hist(log(GEAs$LASSO_LASSO1se$KEGG), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="blue", type = "o")
+  
+  h<-hist(log(GEAs$LASSO_LM$KEGG), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="green", type = "o")
+  
+  
+  
   
   plot(1, type="n", xlab="-log(p-value)", ylab="cummulative counts of number of enriched gene sets", xlim=c(-20, -1), ylim=c(0, 200), main="REACTOME")
   
@@ -812,13 +857,37 @@ LINKER_plot_GEAs<-function(GEAs)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="black", type = "b")
   
-  h<-hist(log(GEAs$VBSR_LASSO_MIN$REACTOME), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$VBSR_LASSOmin$REACTOME), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="red", type = "b")
+  
+  h<-hist(log(GEAs$VBSR_LASSO1se$REACTOME), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="blue", type = "b")
   
   h<-hist(log(GEAs$VBSR_LM$REACTOME), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="green", type = "b")
+  
+  h<-hist(log(GEAs$LASSO_VBSR$REACTOME), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="black", type = "o")
+  
+  h<-hist(log(GEAs$LASSO_LASSOmin$REACTOME), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="red", type = "o")
+  
+  h<-hist(log(GEAs$LASSO_LASSO1se$REACTOME), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="blue", type = "o")
+  
+  h<-hist(log(GEAs$LASSO_LM$REACTOME), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="green", type = "o")
+  
+  
+  
+  
   
   plot(1, type="n", xlab="-log(p-value)", ylab="cummulative counts of number of enriched gene sets", xlim=c(-30, -1), ylim=c(0, 1500), main="GENESIGDB")
   
@@ -842,13 +911,33 @@ LINKER_plot_GEAs<-function(GEAs)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="black", type = "b")
   
-  h<-hist(log(GEAs$VBSR_LASSO_MIN$GENESIGDB), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$VBSR_LASSOmin$GENESIGDB), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="red", type = "b")
+  
+  h<-hist(log(GEAs$VBSR_LASSO1se$GENESIGDB), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="blue", type = "b")
   
   h<-hist(log(GEAs$VBSR_LM$GENESIGDB), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="green", type = "b")
+  
+  h<-hist(log(GEAs$LASSO_VBSR$GENESIGDB), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="black", type = "o")
+  
+  h<-hist(log(GEAs$LASSO_LASSOmin$GENESIGDB), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="red", type = "o")
+  
+  h<-hist(log(GEAs$LASSO_LASSO1se$GENESIGDB), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="blue", type = "o")
+  
+  h<-hist(log(GEAs$LASSO_LM$GENESIGDB), plot = FALSE, breaks = 50)
+  cdf<-cumsum(h$counts)
+  lines(h$mids,cdf, col="green", type = "o")
   
   
 

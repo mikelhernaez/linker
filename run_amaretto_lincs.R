@@ -78,8 +78,9 @@ Gene_set_Collections<-pathway_genes[c(3,4,5,12)]
 LINKER_plot_enrichement_bootstrap(Gene_set_Collections,res_OV_100[[1]],FDR=0.05)
 LINKER_plot_enrichement_bootstrap(Gene_set_Collections,results,FDR=0.05)
 
-enriched_modules_lasso_100<-filter_enriched_modules(Gene_set_Collections,res_OV_100[[1]],FDR=0.05)
-enriched_modules_vbsr_100<-filter_enriched_modules(Gene_set_Collections,res_OV_100[[2]],FDR=0.05)
+enriched_modules_lasso_100<-filter_enriched_modules(Gene_set_Collections,res_OV_100_10$LASSO,FDR=0.05)
+enriched_modules_vbsr_100<-filter_enriched_modules(Gene_set_Collections,res_OV_100_10$VBSR,FDR=0.05)
+enriched_modules_lm_100<-filter_enriched_modules(Gene_set_Collections,res_OV_100_10$LM,FDR=0.05)
 
 #enriched_graph_lasso_100<-LINKER_createEnrichedGraph(enriched_modules_lasso_100)
 #enriched_graph_vbsr_100<-LINKER_createEnrichedGraph(enriched_modules_vbsr_100)
@@ -98,6 +99,11 @@ mod_graphs$LASSO_VBSR<-LINKER_compute_modules_graph(enriched_modules_lasso_100, 
 mod_graphs$LASSO_LASSOmin<-LINKER_compute_modules_graph(enriched_modules_lasso_100, lognorm_est_counts, mode="LASSOmin")
 mod_graphs$LASSO_LASSO1se<-LINKER_compute_modules_graph(enriched_modules_lasso_100, lognorm_est_counts, mode="LASSO1se")
 mod_graphs$LASSO_LM<-LINKER_compute_modules_graph(enriched_modules_lasso_100, lognorm_est_counts, mode="LM")
+
+mod_graphs$LM_VBSR<-LINKER_compute_modules_graph(enriched_modules_lm_100, lognorm_est_counts, mode="VBSR")
+mod_graphs$LM_LASSOmin<-LINKER_compute_modules_graph(enriched_modules_lm_100, lognorm_est_counts, mode="LASSOmin")
+mod_graphs$LM_LASSO1se<-LINKER_compute_modules_graph(enriched_modules_lm_100, lognorm_est_counts, mode="LASSO1se")
+mod_graphs$LM_LM<-LINKER_compute_modules_graph(enriched_modules_lm_100, lognorm_est_counts, mode="LM")
 
 all_graphs<-list()
 all_graphs$VBSR<-LINKER_compute_graph_all_VBSR(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx)
