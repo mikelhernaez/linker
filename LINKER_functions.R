@@ -905,3 +905,26 @@ LINKER_computeBootstrapModuleEnrichment<-function(old_modules, bootstrap_modules
   return(enriched_modules)
   
 }
+
+LINKER_run<-function(lognorm_est_counts, protein_filtered_idx, lincs_filtered_idx, Gene_set_Collections,
+                     link_mode=c("LASSO", "VBSR"),
+                     module_rep="MEAN",
+                     NrModules=100, 
+                     corrClustNrIter=100,
+                     Nr_bootstraps=10,
+                     FDR=0.05,
+                     module_summary=0)
+{
+  res<-list()
+  modules<-list()
+
+  for(i in 1:length(link_mode)){
+    res[[ link_mode[i] ]]<-run_linker(lognorm_est_counts, protein_filtered_idx,  lincs_filtered_idx, NrModules, module_summary,
+                                      mode=link_mode[i], used_method=module_rep, corrClustNrIter,Nr_bootstraps)
+    modules[[ link_mode[i] ]]<-filter_enriched_modules(Gene_set_Collections,res[[ link_mode[i] ]],FDR)
+  }
+  
+  graphs<-LINKER_compute_graphs_from_modules(modules, lognorm_est_counts)
+  
+
+}

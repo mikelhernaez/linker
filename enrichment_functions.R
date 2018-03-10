@@ -112,48 +112,62 @@ gene_enrichment_per_module <-function(Module, pathway_genes, FDR, BC=1)
 
 filter_enriched_modules<-function(Gene_set_Collections,results,FDR=0.05){
   
-  NrSims<-length(results)
-  
-
   enriched_modules<-list()
-  enriched_idx<-1
-  for(idx_sim in 1:NrSims){
-    NrBootstraps<-length(results[[idx_sim]]$bootstrapResult)
-    for(idx_bootstrap in 1:NrBootstraps){
+
+  NrBootstraps<-length(results$bootstrapResult)
+  for(idx_bootstrap in 1:NrBootstraps){
+    
+    NrModules<-results$bootstrapResult[[idx_bootstrap]]$NrModules
+    boot_results<-results$bootstrapResult[[idx_bootstrap]]
+    
+    for(Module_number in 1: NrModules){
       
-      NrModules<-results[[idx_sim]]$bootstrapResult[[idx_bootstrap]]$NrModules
-      boot_results<-results[[idx_sim]]$bootstrapResult[[idx_bootstrap]]
-      for(Module_number in 1: NrModules){
-        
-        #file_name<-paste(c("test1",module_idx), collapse = '_')
-        Module_protein_coding_genes_full_name<-boot_results$AllGenes[which(boot_results$ModuleMembership[,]==Module_number)]
-        Module_protein_coding_gene_list<-sapply(Module_protein_coding_genes_full_name, function(x) strsplit(x, "\\|"))
+      Module_protein_coding_genes_full_name<-boot_results$AllGenes[which(boot_results$ModuleMembership[,]==Module_number)]
+      Module_protein_coding_gene_list<-sapply(Module_protein_coding_genes_full_name, function(x) strsplit(x, "\\|"))
+      if(length(Module_protein_coding_gene_list[[1]])==1)
+      {
+        #NOT FULL GENECODE NAME, ONLY ONE NAME PER GENE!
+        Module_protein_coding_genes<-Module_protein_coding_genes_full_name
+      }
+      else{
+        #FULL GENECODE ANNOTATION!
         Module_protein_coding_genes<-sapply(Module_protein_coding_gene_list, function(x) x[[6]])
         Module_protein_coding_genes<-unname(Module_protein_coding_genes)
-        #Module_protein_coding_genes<-Module_protein_coding_genes_full_name
-        
-        Modules_lncRNAs_full_name<-names(which(boot_results$RegulatoryPrograms[Module_number,]!=0))
-        Modules_lncRNAs_list<-sapply(Modules_lncRNAs_full_name, function(x) strsplit(x, "\\|"))
+      }
+      
+      
+      Modules_lncRNAs_full_name<-names(which(boot_results$RegulatoryPrograms[Module_number,]!=0))
+      Modules_lncRNAs_list<-sapply(Modules_lncRNAs_full_name, function(x) strsplit(x, "\\|"))
+      if(length(Modules_lncRNAs_list[[1]])==1)
+      {
+        #NOT FULL GENECODE NAME, ONLY ONE NAME PER GENE!
+        Modules_lncRNAs<-Modules_lncRNAs_full_name
+      }
+      else{
+        #FULL GENECODE ANNOTATION!
         Modules_lncRNAs<-sapply(Modules_lncRNAs_list, function(x) x[[6]])
         Modules_lncRNAs<-unname(Modules_lncRNAs)
-        #Modules_lncRNAs<-Modules_lncRNAs_full_name
-        
-        GEA<-gene_enrichment_per_module(Module_protein_coding_genes, Gene_set_Collections, FDR)
-        
-        if(sum(sapply(GEA, length))==0){
-          #next()
-        }
-        enriched_modules[[enriched_idx]]<-list(
-            GEA=GEA,
-            protein_coding_genes=Module_protein_coding_genes_full_name, 
-             lncRNAs=Modules_lncRNAs_full_name, 
-             regulatory_program=boot_results$RegulatoryPrograms[Module_number,],
-             training_stats=boot_results$trainingStats[Module_number,],
-             test_stats=results[[idx_sim]]$bootstrapTestStats[[idx_bootstrap]][Module_number],
-             assigned_genes=which(boot_results$ModuleMembership[,]==Module_number))
-        
-        enriched_idx<-enriched_idx + 1
       }
+
+      
+      GEA<-gene_enrichment_per_module(Module_protein_coding_genes, Gene_set_Collections, FDR)
+      
+      if(sum(sapply(GEA, length))==0){
+        #next()
+      }
+      enriched_modules[[enriched_idx]]<-list(
+          GEA=GEA,
+          protein_coding_genes=Module_protein_coding_genes_full_name, 
+           lncRNAs=Modules_lncRNAs_full_name, 
+           regulatory_program=boot_results$RegulatoryPrograms[Module_number,],
+           training_stats=boot_results$trainingStats[Module_number,],
+           test_stats=results$bootstrapTestStats[[idx_bootstrap]][Module_number],
+           assigned_genes=which(boot_results$ModuleMembership[,]==Module_number),
+          bootstrap_idx=idx_bootstrap
+          )
+         
+      
+      enriched_idx<-enriched_idx + 1
     }
   }
   return(enriched_modules)
@@ -321,7 +335,8 @@ LINKER_compute_modules_graph<-function(modules, Data, mode="VBSR",alpha=1-1e-06)
   bp_g<-list()
   i<-1
     
-  for(mod_idx in 1:length(modules))
+  bp_g<-foreach(mod_idx=1:length(modules), .packages = c("vbsr","glmnet","igraph"))%dopar%
+  #for(mod_idx in 1:length(modules))
   {
     pc_genes<-unlist(modules[[mod_idx]]$protein_coding_genes)
     lncRNAs<-unlist(modules[[mod_idx]]$lncRNAs)
@@ -332,18 +347,13 @@ LINKER_compute_modules_graph<-function(modules, Data, mode="VBSR",alpha=1-1e-06)
         
       non_zero_beta<-modules[[mod_idx]]$regulatory_program[which(modules[[mod_idx]]$regulatory_program != 0)]
       if(length(non_zero_beta) != 1){
-        print("error")
+        warning("NON_ZERO_BETA != 1")
       }
         
       driverMat<-matrix(data = non_zero_beta, nrow = length(pc_genes), ncol = length(lncRNAs))
-        
-      Module_protein_coding_gene_list<-sapply(pc_genes, function(x) strsplit(x, "\\|"))
-      Module_protein_coding_genes<-unname(sapply(Module_protein_coding_gene_list, function(x) x[[6]]))
-      Module_lncRNAs_list<-sapply(lncRNAs, function(x) strsplit(x, "\\|"))
-      Module_lncRNAs<-unname(sapply(Module_lncRNAs_list, function(x) x[[6]]))
-        
-      rownames(driverMat)<-Module_protein_coding_genes
-      colnames(driverMat)<-Module_lncRNAs
+      
+      rownames(driverMat)<-pc_genes
+      colnames(driverMat)<-lncRNAs
     }
     else{
         
@@ -388,18 +398,13 @@ LINKER_compute_modules_graph<-function(modules, Data, mode="VBSR",alpha=1-1e-06)
         }
         else
         {
-          print("MODE NOT RECOGNIZED")
+          warning("MODE NOT RECOGNIZED")
         }
         
       }
     
-      Module_protein_coding_gene_list<-sapply(pc_genes, function(x) strsplit(x, "\\|"))
-      Module_protein_coding_genes<-unname(sapply(Module_protein_coding_gene_list, function(x) x[[6]]))
-      Module_lncRNAs_list<-sapply(lncRNAs, function(x) strsplit(x, "\\|"))
-      Module_lncRNAs<-unname(sapply(Module_lncRNAs_list, function(x) x[[6]]))
-    
-      rownames(driverMat)<-Module_protein_coding_genes
-      colnames(driverMat)<-Module_lncRNAs
+      rownames(driverMat)<-pc_genes
+      colnames(driverMat)<-lncRNAs
     
       regulated_genes<-which(rowSums(abs(driverMat))!=0)
       regulatory_lncRNAs<-which(colSums(abs(driverMat))!=0)
@@ -420,8 +425,9 @@ LINKER_compute_modules_graph<-function(modules, Data, mode="VBSR",alpha=1-1e-06)
 
     }
 
-    bp_g[[i]]<-graph_from_incidence_matrix(driverMat)
-    i<-i+1
+    #bp_g[[i]]<-
+    graph_from_incidence_matrix(driverMat)
+    #i<-i+1
   }
     
   return(bp_g)
@@ -683,47 +689,56 @@ LINKER_compute_graph_enrichment_geneSets_graph_list<-function(pathway_genes,grap
   return(GEA)
 }
 
-LINKER_plot_graphs_topology<-function(graphs)
+LINKER_plot_graphs_topology<-function(graph_list)
 {
-  L<-length(graphs)
+
   col=c("black","red","blue","green","black","red","blue","green","black","red","blue","green")
   pch=c(0,2,5,6,18,19,20,1,3,4,7,8)
   
-  
+  module_modes<-names(graph_list)
   par(mfrow=c(3,4))
-  for(idx in 1:length(graphs)){
-    if(class(graphs[[idx]])=="igraph"){
-      t<-table(degree(graphs[[idx]]))
+  for(mode_idx in 1:length(module_modes)){
+    graphs<-graph_list[[mode_idx]]
+    for(idx in 1:length(graphs)){
+      if(class(graphs[[idx]])=="igraph"){
+        t<-table(degree(graphs[[idx]]))
+      }
+      else{
+        t<-table(unlist(lapply(graphs[[idx]], function(x) degree(x))))
+      }
+      plot(as.numeric(names(t)),as.numeric(t)/sum(as.numeric(t)), col=col[idx], 
+           pch = 16,log="xy",xlab='Degree',ylab='P(Degree)', main = c(module_modes[mode_idx],names(graphs)[idx]),xlim=c(1,5000), ylim=c(1/500000,1))
     }
-    else{
-      t<-table(unlist(lapply(graphs[[idx]], function(x) degree(x))))
-    }
-    plot(as.numeric(names(t)),as.numeric(t)/sum(as.numeric(t)), col=col[idx], 
-             pch = 16,log="xy",xlab='Degree',ylab='P(Degree)', main = names(graphs)[idx],xlim=c(1,5000), ylim=c(1/500000,1))
   }
   
   par(mfrow=c(3,4))
-  for(idx in 1:length(graphs)){
-    if(class(graphs[[idx]])=="igraph"){
-      t<-table(degree(graphs[[idx]], V(graphs[[idx]])[V(graphs[[idx]])$type==0]))
+  for(mode_idx in 1:length(module_modes)){
+    graphs<-graph_list[[mode_idx]]
+    for(idx in 1:length(graphs)){
+      if(class(graphs[[idx]])=="igraph"){
+        t<-table(degree(graphs[[idx]], V(graphs[[idx]])[V(graphs[[idx]])$type==0]))
+      }
+      else{
+        t<-table(unlist(unname(lapply(graphs[[idx]], function(x) degree(x, V(x)[V(x)$type==0] )))))
+      }
+      plot(as.numeric(names(t)),as.numeric(t)/sum(as.numeric(t)), col=col[idx], 
+           pch = 16,log="xy",xlab='Degree',ylab='P(Degree)', main = c(module_modes[mode_idx],names(graphs)[idx]),xlim=c(1,5000), ylim=c(1/500000,1))
     }
-    else{
-      t<-table(unlist(unname(lapply(graphs[[idx]], function(x) degree(x, V(x)[V(x)$type==0] )))))
-    }
-    plot(as.numeric(names(t)),as.numeric(t)/sum(as.numeric(t)), col=col[idx], 
-         pch = 16,log="xy",xlab='Degree',ylab='P(Degree)', main = names(graphs)[idx],xlim=c(1,500), ylim=c(1/500000,1))
   }
   
   par(mfrow=c(3,4))
-  for(idx in 1:length(graphs)){
-    if(class(graphs[[idx]])=="igraph"){
-      t<-table(degree(graphs[[idx]], V(graphs[[idx]])[V(graphs[[idx]])$type==1]))
+  for(mode_idx in 1:length(module_modes)){
+    graphs<-graph_list[[mode_idx]]
+    for(idx in 1:length(graphs)){
+      if(class(graphs[[idx]])=="igraph"){
+        t<-table(degree(graphs[[idx]], V(graphs[[idx]])[V(graphs[[idx]])$type==1]))
+      }
+      else{
+        t<-table(unlist(unname(lapply(graphs[[idx]], function(x) degree(x, V(x)[V(x)$type==1] )))))
+      }
+      plot(as.numeric(names(t)),as.numeric(t)/sum(as.numeric(t)), col=col[idx], 
+           pch = 16,log="xy",xlab='Degree',ylab='P(Degree)', main = c(module_modes[mode_idx],names(graphs)[idx]),xlim=c(1,5000), ylim=c(1/500000,1))
     }
-    else{
-      t<-table(unlist(unname(lapply(graphs[[idx]], function(x) degree(x, V(x)[V(x)$type==1] )))))
-    }
-    plot(as.numeric(names(t)),as.numeric(t)/sum(as.numeric(t)), col=col[idx], 
-         pch = 16,log="xy",xlab='Degree',ylab='P(Degree)', main = names(graphs)[idx],xlim=c(1,5000), ylim=c(1/500000,1))
   }
   
 }
@@ -734,51 +749,51 @@ LINKER_plot_GEAs<-function(GEAs)
   par()
   plot(1, type="n", xlab="-log(p-value)", ylab="cummulative counts of number of enriched gene sets", xlim=c(-10, -1), ylim=c(0, 50), main="BIOCARTA")
   
-  h<-hist(log(GEAs$VBSR$BIOCARTA), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$NET$VBSR$BIOCARTA), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="black")
   
-  h<-hist(log(GEAs$LASSOmin$BIOCARTA), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$NET$LASSOmin$BIOCARTA), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="red")
   
-  h<-hist(log(GEAs$LASSO1se$BIOCARTA), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$NET$LASSO1se$BIOCARTA), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="blue")
   
-  h<-hist(log(GEAs$LM$BIOCARTA), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$NET$LM$BIOCARTA), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="green")
   
-  h<-hist(log(GEAs$VBSR_VBSR$BIOCARTA), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$VBSR$VBSR$BIOCARTA), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="black", type = "b")
   
-  h<-hist(log(GEAs$VBSR_LASSOmin$BIOCARTA), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$VBSR$LASSOmin$BIOCARTA), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="red", type = "b")
   
-  h<-hist(log(GEAs$VBSR_LASSO1se$BIOCARTA), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$VBSR$LASSO1se$BIOCARTA), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="blue", type = "b")
   
-  h<-hist(log(GEAs$VBSR_LM$BIOCARTA), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$VBSR$LM$BIOCARTA), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="green", type = "b")
   
-  h<-hist(log(GEAs$LASSO_VBSR$BIOCARTA), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$LASSO$VBSR$BIOCARTA), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="black", type = "o")
   
-  h<-hist(log(GEAs$LASSO_LASSOmin$BIOCARTA), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$LASSO$LASSOmin$BIOCARTA), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="red", type = "o")
   
-  h<-hist(log(GEAs$LASSO_LASSO1se$BIOCARTA), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$LASSO$LASSO1se$BIOCARTA), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="blue", type = "o")
   
-  h<-hist(log(GEAs$LASSO_LM$BIOCARTA), plot = FALSE, breaks = 50)
+  h<-hist(log(GEAs$LASSO$LM$BIOCARTA), plot = FALSE, breaks = 50)
   cdf<-cumsum(h$counts)
   lines(h$mids,cdf, col="green", type = "o")
   
@@ -941,12 +956,24 @@ LINKER_plot_GEAs<-function(GEAs)
   
   
 
-  
-  
-  
-
   #strsplit(names(GEA_REA_LM), "\\.[^\\.]*$")
   
-  
-  
 }
+
+LINKER_compute_graphs_from_modules<-function(modules, Data, graph_modes=c("VBSR","LASSOmin","LASSO1se","LM"))
+{
+  module_modes<-names(modules)
+  graphs<-list()
+  for(i in 1:length(module_modes))
+  {
+    graphs[[module_modes[i]]]<-list()
+    for(j in 1:length(graph_modes)){
+      graphs[[module_modes[i]]][[graph_modes[j]]] <- LINKER_compute_modules_graph(modules[[module_modes[i]]], Data, mode=graph_modes[j])
+    }
+  }
+  return(graphs)
+}
+
+
+
+
