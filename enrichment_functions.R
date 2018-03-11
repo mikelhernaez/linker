@@ -114,6 +114,7 @@ filter_enriched_modules<-function(Gene_set_Collections,results,FDR=0.05){
   
   enriched_modules<-list()
 
+  enriched_idx<-1
   NrBootstraps<-length(results$bootstrapResult)
   for(idx_bootstrap in 1:NrBootstraps){
     
@@ -165,9 +166,7 @@ filter_enriched_modules<-function(Gene_set_Collections,results,FDR=0.05){
            assigned_genes=which(boot_results$ModuleMembership[,]==Module_number),
           bootstrap_idx=idx_bootstrap
           )
-         
-      
-      enriched_idx<-enriched_idx + 1
+      enriched_idx<-enriched_idx+1
     }
   }
   return(enriched_modules)
@@ -433,159 +432,6 @@ LINKER_compute_modules_graph<-function(modules, Data, mode="VBSR",alpha=1-1e-06)
   return(bp_g)
 }
 
-
-
-LINKER_compute_graph_all_VBSR<-function(Data, lincs_idx, pc_idx)
-{
-  
-  X<-Data[lincs_idx,]
-    
-  driverMat<-matrix(data = NA, nrow = length(pc_idx), ncol = length(lincs_idx))
-  
-  #compute the VBSR
-  for(idx_gene in 1:length(pc_idx))
-  {
-    y<-Data[pc_idx[idx_gene],]
-    res<-vbsr(y,t(X),n_orderings = 15,family='normal')
-    betas<-res$beta
-    betas[res$pval > 0.05/(length(pc_idx)*length(lincs_idx))]<-0
-    driverMat[idx_gene,]<-betas
-  }
-  
-  
-  protein_coding_gene_list<-sapply(rownames(Data)[pc_idx], function(x) strsplit(x, "\\|"))
-  protein_coding_genes<-unname(sapply(protein_coding_gene_list, function(x) x[[6]]))
-  lncRNAs_list<-sapply(rownames(Data)[lincs_idx], function(x) strsplit(x, "\\|"))
-  lncRNAs<-unname(sapply(lncRNAs_list, function(x) x[[6]]))
-    
-  rownames(driverMat)<-protein_coding_genes
-  colnames(driverMat)<-lncRNAs
-    
-  regulated_genes<-which(rowSums(abs(driverMat))!=0)
-  regulatory_lncRNAs<-which(colSums(abs(driverMat))!=0)
-  driverMat<-driverMat[regulated_genes,]
-  driverMat<-driverMat[,regulatory_lncRNAs]
-    
-  g<-graph_from_incidence_matrix(driverMat)
-  
-  return(g)
-  
-}
-
-LINKER_compute_graph_all_LASSO_min<-function(Data, lincs_idx, pc_idx, alpha=1-1e-06)
-{
-  
-  X<-Data[lincs_idx,]
-  
-  driverMat<-matrix(data = NA, nrow = length(pc_idx), ncol = length(lincs_idx))
-
-  #compute the VBSR
-  for(idx_gene in 1:length(pc_idx))
-  {
-    y<-Data[pc_idx[idx_gene],]
-    fit = cv.glmnet(t(X), y, alpha = alpha)
-    
-    b_o = coef(fit,s = fit$lambda.min)
-    b_opt <- c(b_o[2:length(b_o)]) # removing the intercept.
-    driverMat[idx_gene,]<-b_opt
-  }
-
-  protein_coding_gene_list<-sapply(rownames(Data)[pc_idx], function(x) strsplit(x, "\\|"))
-  protein_coding_genes<-unname(sapply(protein_coding_gene_list, function(x) x[[6]]))
-  lncRNAs_list<-sapply(rownames(Data)[lincs_idx], function(x) strsplit(x, "\\|"))
-  lncRNAs<-unname(sapply(lncRNAs_list, function(x) x[[6]]))
-  
-  rownames(driverMat)<-protein_coding_genes
-  colnames(driverMat)<-lncRNAs
-  
-  regulated_genes<-which(rowSums(abs(driverMat))!=0)
-  regulatory_lncRNAs<-which(colSums(abs(driverMat))!=0)
-  driverMat<-driverMat[regulated_genes,]
-  driverMat<-driverMat[,regulatory_lncRNAs]
-  
-  g<-graph_from_incidence_matrix(driverMat)
-  
-  return(g)
-  
-}
-
-LINKER_compute_graph_all_LASSO_1se<-function(Data, lincs_idx, pc_idx, alpha=1-1e-06)
-{
-  
-  X<-Data[lincs_idx,]
-  
-  driverMat<-matrix(data = NA, nrow = length(pc_idx), ncol = length(lincs_idx))
-  
-  #compute the VBSR
-  for(idx_gene in 1:length(pc_idx))
-  {
-    y<-Data[pc_idx[idx_gene],]
-    fit = cv.glmnet(t(X), y, alpha = alpha)
-    
-    b_o = coef(fit,s = fit$lambda.1se)
-    b_opt <- c(b_o[2:length(b_o)]) # removing the intercept.
-    driverMat[idx_gene,]<-b_opt
-  }
-  
-  protein_coding_gene_list<-sapply(rownames(Data)[pc_idx], function(x) strsplit(x, "\\|"))
-  protein_coding_genes<-unname(sapply(protein_coding_gene_list, function(x) x[[6]]))
-  lncRNAs_list<-sapply(rownames(Data)[lincs_idx], function(x) strsplit(x, "\\|"))
-  lncRNAs<-unname(sapply(lncRNAs_list, function(x) x[[6]]))
-  
-  rownames(driverMat)<-protein_coding_genes
-  colnames(driverMat)<-lncRNAs
-  
-  regulated_genes<-which(rowSums(abs(driverMat))!=0)
-  regulatory_lncRNAs<-which(colSums(abs(driverMat))!=0)
-  driverMat<-driverMat[regulated_genes,]
-  driverMat<-driverMat[,regulatory_lncRNAs]
-  
-  g<-graph_from_incidence_matrix(driverMat)
-  
-  return(g)
-  
-}
-
-LINKER_compute_graph_all_LM<-function(Data, lincs_idx, pc_idx)
-{
-  GEA_per_linc<-list()
-  i<-1
-  
-  X<-Data[lincs_idx,]
-  
-  driverMat<-matrix(data = 0, nrow = length(pc_idx), ncol = length(lincs_idx))
-  
-  #compute the LM
-  for(idx_gene in 1:length(pc_idx))
-  {
-    y<-Data[pc_idx[idx_gene],]
-    for(i in 1:length(lincs_idx))
-    {
-      x<-t(X)[,i]
-      fit = lm(y~x)
-      s<-summary(fit)
-      driverMat[idx_gene,i]<-s$coefficients[2,"Pr(>|t|)"]<0.05/(length(pc_idx)*length(lincs_idx))
-    }
-  }
-  
-  protein_coding_gene_list<-sapply(rownames(Data)[pc_idx], function(x) strsplit(x, "\\|"))
-  protein_coding_genes<-unname(sapply(protein_coding_gene_list, function(x) x[[6]]))
-  lncRNAs_list<-sapply(rownames(Data)[lincs_idx], function(x) strsplit(x, "\\|"))
-  lncRNAs<-unname(sapply(lncRNAs_list, function(x) x[[6]]))
-  
-  rownames(driverMat)<-protein_coding_genes
-  colnames(driverMat)<-lncRNAs
-  
-  regulated_genes<-which(rowSums(abs(driverMat))!=0)
-  regulatory_lncRNAs<-which(colSums(abs(driverMat))!=0)
-  driverMat<-driverMat[regulated_genes,]
-  driverMat<-driverMat[,regulatory_lncRNAs]
-  
-  g<-graph_from_incidence_matrix(driverMat)
-  
-  return(g)
-  
-}
 LINKER_compute_linc_enrichment_from_graph<-function(g, Gene_set_Collections,FDR=0.05, BC=1)
 {
   
@@ -649,19 +495,19 @@ LINKER_compute_graph_list_enrichment_geneSets<-function(pathway_genes,g_list,FDR
 {
   GEA<-list()
   
-  Num_lincs<-sapply(g_list, function(x) sum(V(g)$type==1))
+  Num_lincs<-sapply(g_list, function(x) sum(V(x)$type==1))
   BC<-mean(Num_lincs)*BC
   # BIOCARTA
-  Gene_set_Collections<-pathway_genes[c(3)]
+  Gene_set_Collections<-pathway_genes[1]
   GEA$BIOCARTA<-LINKER_compute_linc_enrichment_from_graph_list(g_list, Gene_set_Collections,FDR=FDR, BC=BC)
   # KEGG
-  Gene_set_Collections<-pathway_genes[c(4)]
+  Gene_set_Collections<-pathway_genes[2]
   GEA$KEGG<-LINKER_compute_linc_enrichment_from_graph_list(g_list, Gene_set_Collections,FDR=FDR, BC=BC)
   # REACTOME
-  Gene_set_Collections<-pathway_genes[c(5)]
+  Gene_set_Collections<-pathway_genes[3]
   GEA$REACTOME<-LINKER_compute_linc_enrichment_from_graph_list(g_list, Gene_set_Collections,FDR=FDR, BC=BC)
   # GENESIGDB
-  Gene_set_Collections<-pathway_genes[c(12)]
+  Gene_set_Collections<-pathway_genes[4]
   GEA$GENESIGDB<-LINKER_compute_linc_enrichment_from_graph_list(g_list, Gene_set_Collections,FDR=FDR, BC=BC)
   # ALL
   #Gene_set_Collections<-pathway_genes[c(3,4,5,12)]
@@ -670,19 +516,46 @@ LINKER_compute_graph_list_enrichment_geneSets<-function(pathway_genes,g_list,FDR
   return(GEA)
 }
 
-LINKER_compute_graph_enrichment_geneSets_graph_list<-function(pathway_genes,graphs,FDR=0.05,BC=1)
+LINKER_compute_graph_enrichment_geneSets_graph_list<-function(pathway_genes,g,FDR=0.05,BC=20)
 {
-  graph_names<-names(graphs)
   
   GEA<-list()
-  for(i in 1:length(graphs))
+  
+  GEA$MOD<-list()
+  for(i in 1:length(g$MOD))
   {
-    if(class(graphs[[i]])=="list"){
-      
-      GEA[[ graph_names[i] ]]<-LINKER_compute_graph_list_enrichment_geneSets(pathway_genes,graphs[[i]], BC=20)
+    link_mode<-names(g$MOD)[i]
+    GEA$MOD[[ link_mode ]]<-list()
+    
+    for(j in 1:length(g$MOD[[link_mode]]))
+    {
+      graph_mode<-names(g$MOD[[link_mode]])[j]
+      GEA$MOD[[ link_mode ]][[graph_mode]]<-LINKER_compute_graph_list_enrichment_geneSets(pathway_genes,g$MOD[[link_mode]][[graph_mode]], BC=BC)
     }
-    else{
-      GEA[[ graph_names[i] ]]<-LINKER_compute_graph_enrichment_geneSets(pathway_genes,graphs[[i]])
+  }
+  
+  GEA$NET<-list()
+  for(i in 1:length(g$NET))
+  {
+    GEA$NET[[ names(g$NET)[i] ]]<-LINKER_compute_graph_enrichment_geneSets( pathway_genes,g$NET[[i]] )
+  }
+  return(GEA)
+}
+
+LINKER_compute_graph_enrichment_geneSets_graph_list<-function(pathway_genes,g,FDR=0.05,BC=20)
+{
+  
+  GEA<-list()
+  
+  for(i in 1:length(g))
+  {
+    link_mode<-names(g)[i]
+    GEA[[ link_mode ]]<-list()
+    
+    for(j in 1:length(g[[link_mode]]))
+    {
+      graph_mode<-names(g[[link_mode]])[j]
+      GEA[[ link_mode ]][[graph_mode]]<-LINKER_compute_graph_list_enrichment_geneSets(pathway_genes,g[[link_mode]][[graph_mode]], BC=BC)
     }
   }
   

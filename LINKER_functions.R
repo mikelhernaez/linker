@@ -911,20 +911,29 @@ LINKER_run<-function(lognorm_est_counts, protein_filtered_idx, lincs_filtered_id
                      module_rep="MEAN",
                      NrModules=100, 
                      corrClustNrIter=100,
-                     Nr_bootstraps=10,
+                     Nr_bootstraps=20,
                      FDR=0.05,
+                     NrCores=30,
                      module_summary=0)
+  
 {
   res<-list()
   modules<-list()
 
   for(i in 1:length(link_mode)){
-    res[[ link_mode[i] ]]<-run_linker(lognorm_est_counts, protein_filtered_idx,  lincs_filtered_idx, NrModules, module_summary,
-                                      mode=link_mode[i], used_method=module_rep, corrClustNrIter,Nr_bootstraps)
+    res[[ link_mode[i] ]]<-run_linker(lognorm_est_counts, protein_filtered_idx,  lincs_filtered_idx, 
+                                      NrModules, module_summary,NrCores=NrCores,
+                                      mode=link_mode[i], used_method=module_rep, 
+                                      corrClustNrIter=corrClustNrIter,Nr_bootstraps=Nr_bootstraps)
+    
     modules[[ link_mode[i] ]]<-filter_enriched_modules(Gene_set_Collections,res[[ link_mode[i] ]],FDR)
   }
   
   graphs<-LINKER_compute_graphs_from_modules(modules, lognorm_est_counts)
+  
+  GEAs<-LINKER_compute_graph_enrichment_geneSets_graph_list(Gene_set_Collections,graphs,FDR=FDR,BC=Nr_bootstraps)
+  
+  return(list(raw_results=res,modules=modules,graphs=graphs))
   
 
 }

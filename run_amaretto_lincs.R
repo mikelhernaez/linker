@@ -10,9 +10,6 @@ library("glmnet")
 source('~/LINKER_functions.R')
 source('~/run_amaretto_lincRNAs.R')
 
-cl <- makeCluster(8)
-registerDoParallel(cl)
-
 ########## Load the gene pathways for the enrichment analysis ##############################
 GENESETDB_Collections_GeneSymbol_v11<-readMat("./GENESETDB_Collections_GeneSymbol_v11.mat")
 
@@ -30,7 +27,7 @@ for(struct_idx in 1:length(GENESETDB_Collections_GeneSymbol_v11$GENESETDB.Collec
 }
 rm(struct_matrix, struct_geneList, struct_pathways, GENESETDB_Collections_GeneSymbol_v11)
 
-Gene_set_Collections<-pathway_genes[c(3,4,5,12)]
+
 ###########################################################################################
 
 
@@ -71,22 +68,18 @@ protein_filtered_idx<-camodi_input_data$geneIdx
 lincs_filtered_idx<-camodi_input_data$regulatorIdx
 ##########################################################
 
+Gene_set_Collections<-pathway_genes[c(3,4,5,12)]
 
+cl <- makeCluster(16)
+registerDoParallel(cl)
 
-LINKER_run(lognorm_est_counts, protein_filtered_idx,  lincs_filtered_idx, Gene_set_Collections)
+camodi_OV<-LINKER_run(lognorm_est_counts, protein_filtered_idx,  lincs_filtered_idx, Gene_set_Collections, NrCores = 30)
 
+NET_networks_creation(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx)
 
+GEAs<-LINKER_compute_graph_enrichment_geneSets_graph_list(pathway_genes,g)
 
 plot_res_real_data(resC_OV_100_10)
-
-all_g<-list()
-all_g$VBSR<-LINKER_compute_graph_all_VBSR(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx)
-all_g$LASSOmin<-LINKER_compute_graph_all_LASSO_min(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx)
-all_g$LASSO1se<-LINKER_compute_graph_all_LASSO_1se(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx)
-all_g$LM<-LINKER_compute_graph_all_LM(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx)
-
-GEAs<-LINKER_compute_graph_enrichment_geneSets_graph_list(pathway_genes,graphs)
-
 LINKER_plot_GEAs(GEAs)
 LINKER_plot_graphs_topology(graphs)
   
