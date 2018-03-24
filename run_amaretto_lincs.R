@@ -6,9 +6,10 @@ library("R.utils")
 library("vbsr")
 library("Matrix")
 library("glmnet")
+library("colorspace")
 
-source('~/LINKER_functions.R')
-source('~/run_amaretto_lincRNAs.R')
+source('~/linker/LINKER_functions.R')
+source('~/linker/enrichment_functions.R')
 
 ########## Load the gene pathways for the enrichment analysis ##############################
 GENESETDB_Collections_GeneSymbol_v11<-readMat("./GENESETDB_Collections_GeneSymbol_v11.mat")
@@ -35,7 +36,7 @@ rm(struct_matrix, struct_geneList, struct_pathways, GENESETDB_Collections_GeneSy
 load("/data/olivier/OV.rData")
 bootstrap_var<-sleuthSummary$bs_summary$sigma_q_sq
 lognorm_est_counts<-sleuthSummary$bs_summary$obs_counts
-rm(sleuthSummary)
+remove(sleuthSummary)
 #########################################
 
 
@@ -70,16 +71,17 @@ lincs_filtered_idx<-camodi_input_data$regulatorIdx
 
 Gene_set_Collections<-pathway_genes[c(3,4,5,12)]
 
-cl <- makeCluster(16)
-registerDoParallel(cl)
+start_time <- Sys.time()
+camodi_OV_10BS<-LINKER_run(lognorm_est_counts, protein_filtered_idx,  lincs_filtered_idx, Gene_set_Collections, NrCores = 32, Nr_bootstraps = 10)
+Sys.time() - start_time
+save("camodi_OV_10BS",file = "camodi_OV_all_10BS")
 
-camodi_OV<-LINKER_run(lognorm_est_counts, protein_filtered_idx,  lincs_filtered_idx, Gene_set_Collections, NrCores = 30)
+start_time <- Sys.time()
+camodi_OV_NET<-NET_networks_creation(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx,Gene_set_Collections)
+Sys.time() - start_time
+save.image(file = "camodi_OV_NET")
 
-NET_networks_creation(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx)
-
-GEAs<-LINKER_compute_graph_enrichment_geneSets_graph_list(pathway_genes,g)
-
-plot_res_real_data(resC_OV_100_10)
+LINKER_plot_res_real_data(camodi_OV$raw_results, file="camodi_OV_res.pdf")
 LINKER_plot_GEAs(GEAs)
 LINKER_plot_graphs_topology(graphs)
   

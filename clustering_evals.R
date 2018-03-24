@@ -638,17 +638,12 @@ compute_adj_r2<-function(betas, y, regs)
   return( 1 - ( ( (ncol(regs) - 1) / (ncol(regs) - NrRegulators) ) * (1-Rsquare) ) )
 }
 
-plot_res_real_data<-function(res){
+LINKER_plot_res_real_data<-function(results, file = "plots_real_data.pdf"){
   
-  pdf("plots_real_data.pdf")
+  pdf(file)
   
   mar.default <- c(5,4,4,2) + 0.1
   par(mar = mar.default + c(0, 2, 0, 0)) 
-  
-  NrSims<-length(res[[1]])
-  
-  
-  Nr_bootstraps<-length(res[[1]][[1]]$bootstrapResults)
 
   RsquareAjusted<-list()
   RsquareAjusted_test<-list()
@@ -658,65 +653,20 @@ plot_res_real_data<-function(res){
   VarEx_consensus<-list()
   
   
-  for(idx in 1:2){
-    all_idx<-1
-    RsquareAjusted[[idx]]<-list(length = NrSims*Nr_bootstraps)
-    RsquareAjusted_test[[idx]]<-list(length = NrSims*Nr_bootstraps)
-    RsquareAjusted_consensus[[idx]]<-list(length = NrSims)
-    VarEx[[idx]]<-list(length = NrSims*Nr_bootstraps)
-    VarEx_test[[idx]]<-list(length = NrSims*Nr_bootstraps)
-    VarEx_consensus[[idx]]<-list(length = NrSims)
-    
-    for(j in 1:NrSims){
+  for(idx in names(results)){
+    res<-results[[idx]]
+    Nr_bootstraps<-length(res$bootstrapResults)
+    RsquareAjusted[[idx]]<-list(length = Nr_bootstraps)
+    RsquareAjusted_test[[idx]]<-list(length = Nr_bootstraps)
+    VarEx[[idx]]<-list(length = Nr_bootstraps)
+    VarEx_test[[idx]]<-list(length = Nr_bootstraps)
       
-      for(i in 1: Nr_bootstraps){
-        
-        RsquareAjusted[[idx]][[all_idx]]<-rep(res[[idx]][[j]]$bootstrapResults[[i]]$trainingStats[,"RsquareAdjusted"],res[[idx]][[j]]$bootstrapResults[[i]]$trainingStats[,"nrGen"])
-        VarEx[[idx]][[all_idx]]<-rep(res[[idx]][[j]]$bootstrapResults[[i]]$trainingStats[,"condition"],res[[idx]][[j]]$bootstrapResults[[i]]$trainingStats[,"nrGen"])
-        RsquareAjusted_test[[idx]][[all_idx]]<-rep(res[[idx]][[j]]$bootstrapTestStats[[i]][,"RsquareAdjusted"],res[[idx]][[j]]$bootstrapResults[[i]]$trainingStats[,"nrGen"])
-        VarEx_test[[idx]][[all_idx]]<-rep(res[[idx]][[j]]$bootstrapTestStats[[i]][,"condition"],res[[idx]][[j]]$bootstrapResults[[i]]$trainingStats[,"nrGen"])
-        
-        # Clusters<-res[[idx]][[j]]$bootstrapResults[[i]]$ModuleMembership
-        # NrClusters<-res[[idx]][[j]]$bootstrapResults[[i]]$NrModules
-        # 
-        # GeneNames<-res[[idx]][[j]]$bootstrapResults[[i]]$AllGenes
-        # 
-        # silhouette<-numeric(length = length(GeneNames))
-        # for(geneIdx in 1:length(GeneNames)){
-        #   
-        #   geneName<-GeneNames[geneIdx]
-        #   geneCluster<-Clusters[geneName,]
-        #   
-        #   if(geneName %in% rownames(Data) == FALSE){
-        #     print("foo")
-        #   }
-        #   gene<-Data[geneName,]
-        #   
-        #   max_outClust_cor<-0
-        #   for (clustIdx in 1:NrClusters){
-        #     
-        #     CurrentClusterPositions = which(Clusters==clustIdx)
-        #     nrGenesInClusters = length(CurrentClusterPositions)
-        #     module_data<-Data[rownames(Clusters)[CurrentClusterPositions],]
-        #     avg_corr<-(sum(abs(cor(gene,t(module_data)))) - 1)/nrow(module_data) # We need to remove the corr with itself
-        #     if(clustIdx==geneCluster){
-        #       inClust_dis<-1-avg_corr
-        #     }
-        #     else if(avg_corr > max_outClust_cor){
-        #       outClust_dis<-1-avg_corr
-        #       max_outClust_cor<-avg_corr
-        #     }
-        #   }
-        #   silhouette[geneIdx]<-(outClust_dis-inClust_dis)/max(outClust_dis,inClust_dis)
-        #   
-        # }
-       
-        
-        all_idx<-all_idx+1
-      }
+    for(i in 1: Nr_bootstraps){
       
-      #RsquareAjusted_consensus[[idx]][[j]]<-rep(res[[idx]][[j]]$consensusTestStats[,"RsquareAdjusted"],res[[idx]][[j]]$consensusTestStats[,"nrGen"])
-      #VarEx_consensus[[idx]][[j]]<-rep(res[[idx]][[j]]$consensusTestStats[,"condition"],res[[idx]][[j]]$consensusTestStats[,"nrGen"])
+      RsquareAjusted[[idx]][[i]]<-rep(res$bootstrapResults[[i]]$trainingStats[,"RsquareAdjusted"],res$bootstrapResults[[i]]$trainingStats[,"nrGen"])
+      VarEx[[idx]][[i]]<-rep(res$bootstrapResults[[i]]$trainingStats[,"condition"],res$bootstrapResults[[i]]$trainingStats[,"nrGen"])
+      RsquareAjusted_test[[idx]][[i]]<-rep(res$bootstrapTestStats[[i]][,"RsquareAdjusted"],res$bootstrapResults[[i]]$trainingStats[,"nrGen"])
+      VarEx_test[[idx]][[i]]<-rep(res$bootstrapTestStats[[i]][,"condition"],res$bootstrapResults[[i]]$trainingStats[,"nrGen"])
     }
   }
   
@@ -729,43 +679,26 @@ plot_res_real_data<-function(res){
   cdf<-cumsum(h$counts)/sum(h$counts)
   lines(h$mids, cdf, type = 'l', col = "red4", lty = "solid")
   
-  # h<-hist(unlist(RsquareAjusted_consensus[[1]]), plot = FALSE, breaks = "FD")
-  # cdf<-cumsum(h$counts)/sum(h$counts)
-  # lines(h$mids, cdf, type = 'l', col = "blue2", lty = "dashed")
-  # h<-hist(unlist(RsquareAjusted_consensus[[2]]), plot = FALSE, breaks = "FD")
-  # cdf<-cumsum(h$counts)/sum(h$counts)
-  # lines(h$mids, cdf, type = 'l', col = "red2", lty = "dashed")
   legend("topleft", 1.9, 
          c("LASSO","VBSR","Training", "Test"  ), 
          col = c("blue", "red", "black", "black"),
          text.col = "black", lty = c(1,1, 1, 2),
          bg = "gray90", cex = 2)
   
-  all_idx<-1
-  for(j in 1:NrSims){
+  for(i in 1: Nr_bootstraps){
+    h<-hist(RsquareAjusted[[1]][[i]], plot = FALSE, breaks = "FD")
+    cdf<-cumsum(h$counts)/sum(h$counts)
+    lines(h$mids, cdf, type = 'l', col = "blue4", xlim = c(0,1), lty = "solid", xlab="Adjusted Rsquared")
+    h<-hist(RsquareAjusted[[2]][[i]], plot = FALSE, breaks = "FD")
+    cdf<-cumsum(h$counts)/sum(h$counts)
+    lines(h$mids, cdf, type = 'l', col = "red4", lty = "solid")
     
-    for(i in 1: Nr_bootstraps){
-      h<-hist(RsquareAjusted[[1]][[all_idx]], plot = FALSE, breaks = "FD")
-      cdf<-cumsum(h$counts)/sum(h$counts)
-      lines(h$mids, cdf, type = 'l', col = "blue4", xlim = c(0,1), lty = "solid", xlab="Adjusted Rsquared")
-      h<-hist(RsquareAjusted[[2]][[all_idx]], plot = FALSE, breaks = "FD")
-      cdf<-cumsum(h$counts)/sum(h$counts)
-      lines(h$mids, cdf, type = 'l', col = "red4", lty = "solid")
-      
-      h<-hist(RsquareAjusted_test[[1]][[all_idx]], plot = FALSE, breaks = "FD")
-      cdf<-cumsum(h$counts)/sum(h$counts)
-      lines(h$mids, cdf, type = 'l', col = "blue4", xlim = c(0,1), lty = "dotted", xlab="Adjusted Rsquared")
-      h<-hist(RsquareAjusted_test[[2]][[all_idx]], plot = FALSE, breaks = "FD")
-      cdf<-cumsum(h$counts)/sum(h$counts)
-      lines(h$mids, cdf, type = 'l', col = "red4", lty = "dotted")
-      all_idx<-all_idx+1
-    }
-    # h<-hist(RsquareAjusted_consensus[[1]][[j]], plot = FALSE, breaks = "FD")
-    # cdf<-cumsum(h$counts)/sum(h$counts)
-    # lines(h$mids, cdf, type = 'l', col = "blue2", lty = "dashed")
-    # h<-hist(RsquareAjusted_consensus[[2]][[j]], plot = FALSE, breaks = "FD")
-    # cdf<-cumsum(h$counts)/sum(h$counts)
-    # lines(h$mids, cdf, type = 'l', col = "red2", lty = "dashed")
+    h<-hist(RsquareAjusted_test[[1]][[i]], plot = FALSE, breaks = "FD")
+    cdf<-cumsum(h$counts)/sum(h$counts)
+    lines(h$mids, cdf, type = 'l', col = "blue4", xlim = c(0,1), lty = "dotted", xlab="Adjusted Rsquared")
+    h<-hist(RsquareAjusted_test[[2]][[i]], plot = FALSE, breaks = "FD")
+    cdf<-cumsum(h$counts)/sum(h$counts)
+    lines(h$mids, cdf, type = 'l', col = "red4", lty = "dotted")
   }
   
 
@@ -778,45 +711,27 @@ plot_res_real_data<-function(res){
   cdf<-cumsum(h$counts)/sum(h$counts)
   lines(h$mids, cdf, type = 'l', col = "red4", lty = "solid")
   
-  # h<-hist(unlist(VarEx_consensus[[1]]), plot = FALSE, breaks = "FD")
-  # cdf<-cumsum(h$counts)/sum(h$counts)
-  # lines(h$mids, cdf, type = 'l', col = "blue2", lty = "dashed")
-  # h<-hist(unlist(VarEx_consensus[[2]]), plot = FALSE, breaks = "FD")
-  # cdf<-cumsum(h$counts)/sum(h$counts)
-  # lines(h$mids, cdf, type = 'l', col = "red2", lty = "dashed")
-  
-  
   legend("bottomright", 1.9, 
          c("LASSO","VBSR","Training", "Test" ), 
          col = c("blue", "red", "black", "black"),
          text.col = "black", lty = c(1,1, 1, 2),
          bg = "gray90", cex = 2)
   
-  all_idx<-1
-  for(j in 1:NrSims){
+  for(i in 1: Nr_bootstraps){
+    h<-hist(VarEx[[1]][[i]], plot = FALSE, breaks = "FD")
+    cdf<-cumsum(h$counts)/sum(h$counts)
+    lines(h$mids, cdf, type = 'l', col = "blue4", xlim = c(0,1), lty = "dotted", xlab="Adjusted Rsquared")
+    h<-hist(VarEx[[2]][[i]], plot = FALSE, breaks = "FD")
+    cdf<-cumsum(h$counts)/sum(h$counts)
+    lines(h$mids, cdf, type = 'l', col = "red4", lty = "solid")
     
-    for(i in 1: Nr_bootstraps){
-      h<-hist(VarEx[[1]][[all_idx]], plot = FALSE, breaks = "FD")
-      cdf<-cumsum(h$counts)/sum(h$counts)
-      lines(h$mids, cdf, type = 'l', col = "blue4", xlim = c(0,1), lty = "dotted", xlab="Adjusted Rsquared")
-      h<-hist(VarEx[[2]][[all_idx]], plot = FALSE, breaks = "FD")
-      cdf<-cumsum(h$counts)/sum(h$counts)
-      lines(h$mids, cdf, type = 'l', col = "red4", lty = "solid")
-      
-      h<-hist(VarEx_test[[1]][[all_idx]], plot = FALSE, breaks = "FD")
-      cdf<-cumsum(h$counts)/sum(h$counts)
-      lines(h$mids, cdf, type = 'l', col = "blue4", xlim = c(0,1), lty = "dotted", xlab="Adjusted Rsquared")
-      h<-hist(VarEx_test[[2]][[all_idx]], plot = FALSE, breaks = "FD")
-      cdf<-cumsum(h$counts)/sum(h$counts)
-      lines(h$mids, cdf, type = 'l', col = "red4", lty = "solid")
-      all_idx<-all_idx+1
-    }
-    # h<-hist(VarEx_consensus[[1]][[j]], plot = FALSE, breaks = "FD")
-    # cdf<-cumsum(h$counts)/sum(h$counts)
-    # lines(h$mids, cdf, type = 'l', col = "blue2", lty = "dashed")
-    # h<-hist(VarEx_consensus[[2]][[j]], plot = FALSE, breaks = "FD")
-    # cdf<-cumsum(h$counts)/sum(h$counts)
-    # lines(h$mids, cdf, type = 'l', col = "red2", lty = "dashed")
+    h<-hist(VarEx_test[[1]][[i]], plot = FALSE, breaks = "FD")
+    cdf<-cumsum(h$counts)/sum(h$counts)
+    lines(h$mids, cdf, type = 'l', col = "blue4", xlim = c(0,1), lty = "dotted", xlab="Adjusted Rsquared")
+    h<-hist(VarEx_test[[2]][[i]], plot = FALSE, breaks = "FD")
+    cdf<-cumsum(h$counts)/sum(h$counts)
+    lines(h$mids, cdf, type = 'l', col = "red4", lty = "solid")
+
   }
   dev.off()
 }

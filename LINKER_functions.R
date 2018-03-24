@@ -8,25 +8,25 @@ run_linker<-function(lognorm_est_counts, protein_filtered_idx, lincs_filtered_id
   # Creating the parameters structure
   Parameters <- list(Lambda=Lambda,pmax=pmax,alpha=alpha, mode=mode, used_method=used_method)
   sample_size<-dim(lognorm_est_counts)[2]
-  test_size<-round(0.1*sample_size)
-  train_size<-round(0.7*sample_size)
+  #test_size<-round(0.2*sample_size)
+  train_size<-round(0.8*sample_size)
   EvaluateTestSet<-list()
   bootstrap_modules<-list()
   bootstrap_results<-list()
-  test_samples<-sample(1:sample_size, test_size, replace=F)
-  train_val_samples<-setdiff(1:sample_size, test_samples)
+  #test_samples<-sample(1:sample_size, test_size, replace=F)
+  #train_val_samples<-setdiff(1:sample_size, test_samples)
   
-  Regulator_data_test = t(scale(t(lognorm_est_counts[lincs_filtered_idx,test_samples])))
-  MA_matrix_Var_test = t(scale(t(lognorm_est_counts[protein_filtered_idx,test_samples])))
+  #Regulator_data_test = t(scale(t(lognorm_est_counts[lincs_filtered_idx,test_samples])))
+  #MA_matrix_Var_test = t(scale(t(lognorm_est_counts[protein_filtered_idx,test_samples])))
   
-  Regulator_data_train_val = t(scale(t(lognorm_est_counts[lincs_filtered_idx,train_val_samples])))
-  MA_matrix_Var_train_val = t(scale(t(lognorm_est_counts[protein_filtered_idx,train_val_samples])))
+  #Regulator_data_train_val = t(scale(t(lognorm_est_counts[lincs_filtered_idx,train_val_samples])))
+  #MA_matrix_Var_train_val = t(scale(t(lognorm_est_counts[protein_filtered_idx,train_val_samples])))
   
   for(boost_idx in 1:Nr_bootstraps)
   {
     
-    train_samples<-sample(train_val_samples, train_size, replace=F)
-    validation_samples<-setdiff(train_val_samples, train_samples)
+    train_samples<-sample(1:sample_size, train_size, replace=F)
+    validation_samples<-setdiff(1:sample_size, train_samples)
     
     Regulator_data_train = t(scale(t(lognorm_est_counts[lincs_filtered_idx,train_samples])))    
     Regulator_data_validation = t(scale(t(lognorm_est_counts[lincs_filtered_idx,validation_samples])))
@@ -313,9 +313,9 @@ LINKER_LearnRegulatoryPrograms<-function(Data,Clusters,RegulatorData,RegulatorSi
     }
     X = RegulatorData
     
-    if(mode=="LASSO"){
+    if(mode=="LASSOmin"){
       
-      fit = cv.glmnet(t(X), y, alpha = alpha, pmax=10)
+      fit = cv.glmnet(t(X), y, alpha = alpha)
       #fit = cv.glmnet(t(X), y, alpha = alpha, pmax = pmax, lambda = grid)
       
       nonZeroLambdas <- fit$lambda[which(fit$nzero>0)]
@@ -333,6 +333,28 @@ LINKER_LearnRegulatoryPrograms<-function(Data,Clusters,RegulatorData,RegulatorSi
       }
       #b_o = coef(fit,s = bestNonZeroLambda)
       b_o = coef(fit,s = fit$lambda.min)
+      b_opt <- c(b_o[2:length(b_o)]) # removing the intercept.
+    }
+    else if(mode=="LASSO1se"){
+      
+      fit = cv.glmnet(t(X), y, alpha = alpha)
+      #fit = cv.glmnet(t(X), y, alpha = alpha, pmax = pmax, lambda = grid)
+      
+      nonZeroLambdas <- fit$lambda[which(fit$nzero>0)]
+      nonZeroCVMs <- fit$cvm[which(fit$nzero>0)]
+      
+      if(length(which(nonZeroCVMs==min(nonZeroCVMs,na.rm=TRUE)))==0){
+        
+        #for now: just print a warning, *although* this error WILL cause LINKER to crash in a few steps.
+        warnMessage <- paste0("\nOn cluster ",i," there were no cv.glm results that gave non-zero coefficients.")
+        warning(warnMessage);
+        bestNonZeroLambda<-fit$lambda.min
+      }
+      else{
+        bestNonZeroLambda <- nonZeroLambdas[which(nonZeroCVMs==min(nonZeroCVMs,na.rm=TRUE))]
+      }
+      #b_o = coef(fit,s = bestNonZeroLambda)
+      b_o = coef(fit,s = fit$lambda.1se)
       b_opt <- c(b_o[2:length(b_o)]) # removing the intercept.
     }
     else if(mode=="VBSR"){
@@ -451,7 +473,7 @@ LINKER_ReassignGenesToClusters <- function(Data,RegulatorData,Beta,Clusters){
     if(NrGenesInCluster<MIN_NUM_GENES_PER_MODULE){
       # I need to reassign these genes
       genesInModule<-which(nc==i)
-      print("One cluster removed!")
+      #print("One cluster removed!")
       #remove the cluster
       ModuleVectors[i,]<-0
       for(j in genesInModule){
@@ -907,7 +929,7 @@ LINKER_computeBootstrapModuleEnrichment<-function(old_modules, bootstrap_modules
 }
 
 LINKER_run<-function(lognorm_est_counts, protein_filtered_idx, lincs_filtered_idx, Gene_set_Collections,
-                     link_mode=c("LASSO", "VBSR"),
+                     link_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
                      module_rep="MEAN",
                      NrModules=100, 
                      corrClustNrIter=100,
@@ -926,14 +948,15 @@ LINKER_run<-function(lognorm_est_counts, protein_filtered_idx, lincs_filtered_id
                                       mode=link_mode[i], used_method=module_rep, 
                                       corrClustNrIter=corrClustNrIter,Nr_bootstraps=Nr_bootstraps)
     
-    modules[[ link_mode[i] ]]<-filter_enriched_modules(Gene_set_Collections,res[[ link_mode[i] ]],FDR)
+    modules[[ link_mode[i] ]]<-LINKER_filter_enriched_modules(Gene_set_Collections,res[[ link_mode[i] ]],FDR)
+    print(paste0("Link mode ",link_mode[i]," completed!"))  
   }
   
   graphs<-LINKER_compute_graphs_from_modules(modules, lognorm_est_counts)
   
-  GEAs<-LINKER_compute_graph_enrichment_geneSets_graph_list(Gene_set_Collections,graphs,FDR=FDR,BC=Nr_bootstraps)
+  GEAs<-LINKER_compute_graph_enrichment_geneSets_graph_list(Gene_set_Collections,graphs,FDR=FDR,BC=Nr_bootstraps, NrCores = NrCores)
   
-  return(list(raw_results=res,modules=modules,graphs=graphs))
+  return(list(raw_results=res,modules=modules,graphs=graphs, GEAs=GEAs))
   
 
 }
