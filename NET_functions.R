@@ -166,7 +166,7 @@ NET_compute_graph_enrichment_geneSets<-function(pathway_genes,g,FDR=0.05,BC=1, N
 {
   GEA<-list()
   Num_lincs<-sum(V(g)$type==1)
-  BC<-Num_lincs*BC
+  #BC<-Num_lincs*BC
   # BIOCARTA
   Gene_set_Collections<-pathway_genes[c(1)]
   GEA$BIOCARTA<-NET_compute_linc_enrichment_from_graph(g, Gene_set_Collections,FDR=FDR, BC=BC, NrCores=NrCores)

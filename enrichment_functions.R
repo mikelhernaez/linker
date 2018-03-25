@@ -428,20 +428,20 @@ LINKER_compute_linc_enrichment_from_graph_list<-function(g_list, Gene_set_Collec
     path_lincs[[i]]<-unlist(lapply(GEA,function(x) unlist(x)))
   }
   
-  path_lincs<-unlist(path_lincs)
-  unique_paths_linc<-unique(names(path_lincs))
-  GEA_per_linc<-path_lincs[unique_paths_linc]
+  #path_lincs<-unlist(path_lincs)
+  #unique_paths_linc<-unique(names(path_lincs))
+  #GEA_per_linc<-path_lincs[unique_paths_linc]
   
-  return(GEA_per_linc)
+  return(path_lincs)
   
 }
 
-LINKER_compute_graph_list_enrichment_geneSets<-function(pathway_genes,g_list,FDR=0.05,BC=20, NrCores=1)
+LINKER_compute_graph_list_enrichment_geneSets<-function(pathway_genes,g_list,FDR=0.05,BC=1, NrCores=1)
 {
   GEA<-list()
   
   Num_lincs<-sapply(g_list, function(x) sum(V(x)$type==1))
-  BC<-mean(Num_lincs)*BC
+  #BC<-mean(Num_lincs)*BC
   # BIOCARTA
   Gene_set_Collections<-pathway_genes[1]
   GEA$BIOCARTA<-LINKER_compute_linc_enrichment_from_graph_list(g_list, Gene_set_Collections,FDR=FDR, BC=BC,NrCores=NrCores)
@@ -463,7 +463,7 @@ LINKER_compute_graph_list_enrichment_geneSets<-function(pathway_genes,g_list,FDR
 
 
 
-LINKER_compute_graph_enrichment_geneSets_graph_list<-function(pathway_genes,g,FDR=0.05,BC=20, NrCores=1)
+LINKER_compute_graph_enrichment_geneSets_graph_list<-function(pathway_genes,g,FDR=0.05,BC=1, NrCores=1)
 {
   
   GEA<-list()
@@ -553,6 +553,7 @@ LINKER_plot_graphs_topology<-function(graph_list)
   }
   
 }
+
   
 LINKER_plot_GEAs<-function(GEAs)
 {  
@@ -674,5 +675,134 @@ LINKER_compute_graphs_from_modules<-function(modules, Data, graph_modes=c("VBSR"
 }
 
 
+LINKER_plot_GEAs_boots<-function(GEAs, modules)
+{  
+  
+  plot(1, xlab="Bootstrap Num.", ylab="cummulative counts of new enriched gene sets", xlim=c(0, 3), ylim=c(0, 1500), main="BIOCARTA")
+  
+  link_mode<-names(GEAs)
+  col=rainbow_hcl(length(link_mode))
+  
+  for(i in 1:length(link_mode)){
+    boot_IDs<-sapply(modules[[ link_mode[i] ]], function(x) x$bootstrap_idx)
+    NrBootstraps<-max(boot_IDs)
+    net_mode<-names(GEAs[[ link_mode[i] ]])
+    for(j in 1:length(net_mode)){
+      new_sets<-list()
+      union_sets<-c()
+      for(boot_id in 1:NrBootstraps){
+        boot_sets<-names(unlist(GEAs[[ link_mode[i] ]][[ net_mode[j] ]]$BIOCARTA[which(boot_IDs==boot_id)]))
+        new_sets[[boot_id]]<-setdiff(boot_sets,union_sets)
+        union_sets<-union(union_sets,new_sets[[boot_id]])
+      }
+      lines(1:NrBootstraps,cumsum(sapply(new_sets, length)), col=col[i])
+      points(1:NrBootstraps,cumsum(sapply(new_sets, length)), col=col[i], pch=j)
+    }
+  }
+  legend("topleft", 1.9, 
+         c(link_mode,net_mode), 
+         col = c(col,rep.int("black",length(net_mode))),
+         text.col = "black", 
+         lty = c(rep.int(1,length(link_mode)),rep.int(-1,length(net_mode))), 
+         pch = c(rep.int(-1,length(link_mode)),1:length(net_mode)),
+         bg = "gray90",cex = 2)
+  
+  
+  
+  plot(1, xlab="Bootstrap Num.", ylab="cummulative counts of new enriched gene sets", xlim=c(0, 3), ylim=c(0, 1500), main="KEGG")
+  
+  link_mode<-names(GEAs)
+  col=rainbow_hcl(length(link_mode))
+  
+  for(i in 1:length(link_mode)){
+    boot_IDs<-sapply(modules[[ link_mode[i] ]], function(x) x$bootstrap_idx)
+    NrBootstraps<-max(boot_IDs)
+    net_mode<-names(GEAs[[ link_mode[i] ]])
+    for(j in 1:length(net_mode)){
+      new_sets<-list()
+      union_sets<-c()
+      for(boot_id in 1:NrBootstraps){
+        boot_sets<-names(unlist(GEAs[[ link_mode[i] ]][[ net_mode[j] ]]$KEGG[which(boot_IDs==boot_id)]))
+        new_sets[[boot_id]]<-setdiff(boot_sets,union_sets)
+        union_sets<-union(union_sets,new_sets[[boot_id]])
+      }
+      lines(1:NrBootstraps,cumsum(sapply(new_sets, length)), col=col[i])
+      points(1:NrBootstraps,cumsum(sapply(new_sets, length)), col=col[i], pch=j)
+    }
+  }
+  legend("topleft", 1.9, 
+         c(link_mode,net_mode), 
+         col = c(col,rep.int("black",length(net_mode))),
+         text.col = "black", 
+         lty = c(rep.int(1,length(link_mode)),rep.int(-1,length(net_mode))), 
+         pch = c(rep.int(-1,length(link_mode)),1:length(net_mode)),
+         bg = "gray90",cex = 2)
+  
+  
+  plot(1, xlab="Bootstrap Num.", ylab="cummulative counts of new enriched gene sets", xlim=c(0, 3), ylim=c(0, 1500), main="REACTOME")
+  
+  link_mode<-names(GEAs)
+  col=rainbow_hcl(length(link_mode))
+  
+  for(i in 1:length(link_mode)){
+    boot_IDs<-sapply(modules[[ link_mode[i] ]], function(x) x$bootstrap_idx)
+    NrBootstraps<-max(boot_IDs)
+    net_mode<-names(GEAs[[ link_mode[i] ]])
+    for(j in 1:length(net_mode)){
+      new_sets<-list()
+      union_sets<-c()
+      for(boot_id in 1:NrBootstraps){
+        boot_sets<-names(unlist(GEAs[[ link_mode[i] ]][[ net_mode[j] ]]$REACTOME[which(boot_IDs==boot_id)]))
+        new_sets[[boot_id]]<-setdiff(boot_sets,union_sets)
+        union_sets<-union(union_sets,new_sets[[boot_id]])
+      }
+      lines(1:NrBootstraps,cumsum(sapply(new_sets, length)), col=col[i])
+      points(1:NrBootstraps,cumsum(sapply(new_sets, length)), col=col[i], pch=j)
+    }
+  }
+  legend("topleft", 1.9, 
+         c(link_mode,net_mode), 
+         col = c(col,rep.int("black",length(net_mode))),
+         text.col = "black", 
+         lty = c(rep.int(1,length(link_mode)),rep.int(-1,length(net_mode))), 
+         pch = c(rep.int(-1,length(link_mode)),1:length(net_mode)),
+         bg = "gray90",cex = 2)
+  
+  
+  
+  
+  plot(1, xlab="Bootstrap Num.", ylab="cummulative counts of new enriched gene sets", xlim=c(0, 3), ylim=c(0, 5000), main="GENESIGDB")
+  
+  link_mode<-names(GEAs)
+  col=rainbow_hcl(length(link_mode))
+  
+  for(i in 1:length(link_mode)){
+    boot_IDs<-sapply(modules[[ link_mode[i] ]], function(x) x$bootstrap_idx)
+    NrBootstraps<-max(boot_IDs)
+    net_mode<-names(GEAs[[ link_mode[i] ]])
+    for(j in 1:length(net_mode)){
+      new_sets<-list()
+      union_sets<-c()
+      for(boot_id in 1:NrBootstraps){
+        boot_sets<-names(unlist(GEAs[[ link_mode[i] ]][[ net_mode[j] ]]$GENESIGDB[which(boot_IDs==boot_id)]))
+        new_sets[[boot_id]]<-setdiff(boot_sets,union_sets)
+        union_sets<-union(union_sets,new_sets[[boot_id]])
+      }
+      lines(1:NrBootstraps,cumsum(sapply(new_sets, length)), col=col[i])
+      points(1:NrBootstraps,cumsum(sapply(new_sets, length)), col=col[i], pch=j)
+    }
+  }
+  legend("topleft", 1.9, 
+         c(link_mode,net_mode), 
+         col = c(col,rep.int("black",length(net_mode))),
+         text.col = "black", 
+         lty = c(rep.int(1,length(link_mode)),rep.int(-1,length(net_mode))), 
+         pch = c(rep.int(-1,length(link_mode)),1:length(net_mode)),
+         bg = "gray90",cex = 2)
+  
+  
+  #strsplit(names(GEA_REA_LM), "\\.[^\\.]*$")
+  
+}
 
 

@@ -61,7 +61,7 @@ protein_filtered_idx <- protein_idx[protein_top_bio_var];
 
 
 ########## Load the CaMoDi data #########
-camodi_input_data<-readMat("./Tumor_OV50_to_R.mat")
+camodi_input_data<-readMat("./Tumor_HNSC50_to_R.mat")
 rownames(camodi_input_data$geneExpression.matrix)<-unlist(camodi_input_data$geneNames)
 
 lognorm_est_counts<-camodi_input_data$geneExpression.matrix
@@ -72,9 +72,9 @@ lincs_filtered_idx<-camodi_input_data$regulatorIdx
 Gene_set_Collections<-pathway_genes[c(3,4,5,12)]
 
 start_time <- Sys.time()
-camodi_OV_10BS<-LINKER_run(lognorm_est_counts, protein_filtered_idx,  lincs_filtered_idx, Gene_set_Collections, NrCores = 32, Nr_bootstraps = 10)
+camodi_HNSC_10BS<-LINKER_run(lognorm_est_counts, protein_filtered_idx,  lincs_filtered_idx, Gene_set_Collections, NrCores = 32, Nr_bootstraps = 10)
 Sys.time() - start_time
-save("camodi_OV_10BS",file = "camodi_OV_all_10BS")
+save("camodi_HNSC_10BS",file = "camodi_HNSC_all_10BS")
 
 start_time <- Sys.time()
 camodi_OV_NET<-NET_networks_creation(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx,Gene_set_Collections)

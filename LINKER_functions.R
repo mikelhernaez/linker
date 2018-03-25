@@ -954,7 +954,7 @@ LINKER_run<-function(lognorm_est_counts, protein_filtered_idx, lincs_filtered_id
   
   graphs<-LINKER_compute_graphs_from_modules(modules, lognorm_est_counts)
   
-  GEAs<-LINKER_compute_graph_enrichment_geneSets_graph_list(Gene_set_Collections,graphs,FDR=FDR,BC=Nr_bootstraps, NrCores = NrCores)
+  GEAs<-LINKER_compute_graph_enrichment_geneSets_graph_list(Gene_set_Collections,graphs,FDR=FDR,BC=1, NrCores = NrCores)
   
   return(list(raw_results=res,modules=modules,graphs=graphs, GEAs=GEAs))
   
