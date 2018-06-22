@@ -77,9 +77,9 @@ Sys.time() - start_time
 save("camodi_HNSC_10BS",file = "camodi_HNSC_all_10BS")
 
 start_time <- Sys.time()
-camodi_OV_NET<-NET_networks_creation(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx,Gene_set_Collections)
+camodi_HNSC_NET<-NET_networks_creation(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx,Gene_set_Collections)
 Sys.time() - start_time
-save.image(file = "camodi_OV_NET")
+save("camodi_HNSC_NET",file = "camodi_HNSC_NET")
 
 LINKER_plot_res_real_data(camodi_OV$raw_results, file="camodi_OV_res.pdf")
 LINKER_plot_GEAs(GEAs)

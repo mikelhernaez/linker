@@ -112,7 +112,16 @@ NET_compute_graph_all_LM<-function(Data, lincs_idx, pc_idx)
     
   {
     y<-Data[pc_idx[idx_gene],]
-    NET_compute_LM_from_gene(y,X,Pthre)
+    #NET_compute_LM_from_gene(y,X,Pthre)
+    driverVec<-numeric(length=ncol(X))
+    for(i in 1:ncol(X))
+    {
+      x<-X[,i]
+      fit = lm(y~x)
+      s<-summary(fit)
+      driverVec[i]<-(s$coefficients[2,"Pr(>|t|)"] < Pthre)
+    }
+    driverVec
   }
 
   protein_coding_genes<-rownames(Data)[pc_idx]

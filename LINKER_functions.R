@@ -79,6 +79,40 @@ run_linker<-function(lognorm_est_counts, protein_filtered_idx, lincs_filtered_id
 
 }
 
+run_linker_inference<-function(lognorm_est_counts, protein_filtered_idx, lincs_filtered_idx, NrModules, module_summary, 
+                     Lambda=0.0001, alpha=1-1e-06,
+                     pmax=10, mode="LASSO", used_method="LINKER",
+                     NrCores=30, corrClustNrIter=21,
+                     Nr_bootstraps=1)
+{
+  
+  # Creating the parameters structure
+  Parameters <- list(Lambda=Lambda,pmax=pmax,alpha=alpha, mode=mode, used_method=used_method)
+  sample_size<-dim(lognorm_est_counts)[2]
+  
+  bootstrap_modules<-list()
+  bootstrap_results<-list()
+  
+  for(boost_idx in 1:Nr_bootstraps)
+  {
+    
+    regulator_matrix = t(scale(t(lognorm_est_counts[lincs_filtered_idx,])))    
+    
+    target_matrix = t(scale(t(lognorm_est_counts[protein_filtered_idx,])))
+    
+    LINKERinit<-LINKER_init(MA_matrix_Var = target_matrix, RegulatorData = regulator_matrix, NrModules = NrModules, NrCores=NrCores, corrClustNrIter=corrClustNrIter, Parameters = Parameters )
+    
+    
+    tmp<-LINKER_corrClust(LINKERinit)
+    bootstrap_results[[boost_idx]]<-tmp
+    
+    printf("Bootstrap %d, NrModules %d:\n", boost_idx, bootstrap_results[[boost_idx]]$NrModules)
+    
+  }
+  
+    return(bootstrap_results)
+}
+
 LINKER_init <- function(MA_matrix_Var, RegulatorData, NrModules, NrCores=30, corrClustNrIter=21, Parameters) {
   
   if (nrow(MA_matrix_Var)>NrModules){
@@ -191,7 +225,7 @@ LINKER_corrClust <- function(LINKERinit){
   NrCores<-LINKERinit$NrCores
   
   # this will register nr of cores/threads, keep this here so the user can decide how many cores based on their hardware.
-  registerDoParallel(cores=NrCores)
+  #registerDoParallel(cores=NrCores)
   ptm1 <- proc.time()
   
   RegulatorData_rownames=rownames(RegulatorData)
@@ -286,7 +320,7 @@ LINKER_LearnRegulatoryPrograms<-function(Data,Clusters,RegulatorData,RegulatorSi
   #collapsed_rows<-collapseRows(Data,Clusters,rownames(Data),method='ME')
   #Data_collapsed<-collapsed_rows$datETcollapsed
   
-  BetaY_all <- foreach(i=1:NrClusters,.combine=cbind,.init=list(list(),list(),list()),.packages = "glmnet") %dopar% {
+  BetaY_all <- foreach(i=1:NrClusters,.combine=cbind,.init=list(list(),list(),list()),.packages = c("vbsr","glmnet","igraph")) %dopar% {
     #for (i in 1:NrClusters){
     
     #y<-Data_collapsed[which(rownames(collapsed_rows$datETcollapsed)==as.character(ClusterIDs[i])),]
@@ -933,22 +967,22 @@ LINKER_run<-function(lognorm_est_counts, protein_filtered_idx, lincs_filtered_id
                      module_rep="MEAN",
                      NrModules=100, 
                      corrClustNrIter=100,
-                     Nr_bootstraps=20,
+                     Nr_bootstraps=10,
                      FDR=0.05,
                      NrCores=30,
                      module_summary=0)
   
 {
-  res<-list()
-  modules<-list()
+  res_GBM<-list()
+  modules_GBM<-list()
 
   for(i in 1:length(link_mode)){
-    res[[ link_mode[i] ]]<-run_linker(lognorm_est_counts, protein_filtered_idx,  lincs_filtered_idx, 
+    res_GBM[[ link_mode[i] ]]<-run_linker(lognorm_est_counts, protein_filtered_idx,  lincs_filtered_idx, 
                                       NrModules, module_summary,NrCores=NrCores,
                                       mode=link_mode[i], used_method=module_rep, 
                                       corrClustNrIter=corrClustNrIter,Nr_bootstraps=Nr_bootstraps)
     
-    modules[[ link_mode[i] ]]<-LINKER_filter_enriched_modules(Gene_set_Collections,res[[ link_mode[i] ]],FDR)
+    modules_GBM[[ link_mode[i] ]]<-LINKER_filter_enriched_modules(Gene_set_Collections,res[[ link_mode[i] ]],FDR)
     print(paste0("Link mode ",link_mode[i]," completed!"))  
   }
   

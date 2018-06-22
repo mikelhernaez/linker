@@ -6,24 +6,34 @@ rownames(camodi_input_data$geneExpression.matrix)<-unlist(camodi_input_data$gene
 res<-list()
 res[[1]]<-list()
 res[[2]]<-list()
-sim<-list()
-for(i in 1:2){
   
-  sim[[i]]<-generate_sim_data(camodi_input_data$geneExpression.matrix[camodi_input_data$regulatorIdx,])
+sim<-generate_sim_data(camodi_input_data$geneExpression.matrix[camodi_input_data$regulatorIdx,])
+sim[[1]]<-lognorm_est_counts
+sim[[2]]<-protein_filtered_idx
+sim[[3]]<-lincs_filtered_idx
+
+link_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM")
   
-  res[[1]][[i]]<-run_linker(sim[[i]][[1]], sim[[i]][[2]], sim[[i]][[3]], NrModules=40, module_summary=1,
-                            mode="LASSO", used_method="MEAN", corrClustNrIter=30,Nr_bootstraps=20)
+for(i in 1:length(link_mode)){
+  res[[ link_mode[i] ]]<-run_linker(lognorm_est_counts, protein_filtered_idx,  lincs_filtered_idx, 
+                                    NrModules=40, module_summary=0,NrCores=32,
+                                    mode=link_mode[i], used_method="MEAN", 
+                                    corrClustNrIter=30,Nr_bootstraps=10)
   
-  res[[2]][[i]]<-run_linker(sim[[i]][[1]], sim[[i]][[2]], sim[[i]][[3]], NrModules=40, module_summary=1,
-                            mode="VBSR", used_method="MEAN", corrClustNrIter=30,Nr_bootstraps=20)
+  print(paste0("Link mode ",link_mode[i]," completed!"))  
+}
+  
+  #res[[1]][[i]]<-run_linker(sim[[i]][[1]], sim[[i]][[2]], sim[[i]][[3]], NrModules=40, module_summary=1,
+  #                          mode="LASSO", used_method="MEAN", corrClustNrIter=30,Nr_bootstraps=20)
+  
+  #res[[2]][[i]]<-run_linker(sim[[i]][[1]], sim[[i]][[2]], sim[[i]][[3]], NrModules=40, module_summary=1,
+  #                          mode="VBSR", used_method="MEAN", corrClustNrIter=30,Nr_bootstraps=20)
   
   #res[[1]][[i]]<-run_linker(camodi_input_data$geneExpression.matrix, camodi_input_data$geneIdx, camodi_input_data$regulatorIdx, NrModules=100, module_summary=1,
   #                          mode="LASSO", used_method="MEAN", corrClustNrIter=30,Nr_bootstraps=10)
   
   #res[[2]][[i]]<-run_linker(camodi_input_data$geneExpression.matrix, camodi_input_data$geneIdx, camodi_input_data$regulatorIdx, NrModules=100, module_summary=1,
   #                          mode="VBSR", used_method="MEAN", corrClustNrIter=30,Nr_bootstraps=10)
-  
-}
 
 plot_clust_eval(sim, res, 2)
 

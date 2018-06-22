@@ -418,7 +418,7 @@ LINKER_compute_modules_graph<-function(modules, Data, mode="VBSR",alpha=1-1e-06)
 LINKER_compute_linc_enrichment_from_graph_list<-function(g_list, Gene_set_Collections,FDR=0.05, BC=1,NrCores=1)
 {
   
-  registerDoParallel(NrCores)
+  #registerDoParallel(NrCores)
   path_lincs<-list()
   for(i in 1:length(g_list))
   {
