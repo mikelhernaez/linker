@@ -154,6 +154,64 @@ LINKER_filter_enriched_modules<-function(Gene_set_Collections,results,FDR=0.05){
   
 }
 
+LINKER_extract_modules<-function(results){
+  
+  modules<-list()
+  
+  enriched_idx<-1
+  NrBootstraps<-length(results$bootstrapResult)
+  for(idx_bootstrap in 1:NrBootstraps){
+    
+    NrModules<-results$bootstrapResult[[idx_bootstrap]]$NrModules
+    boot_results<-results$bootstrapResult[[idx_bootstrap]]
+    
+    for(Module_number in 1: NrModules){
+      
+      Module_protein_coding_genes_full_name<-boot_results$AllGenes[which(boot_results$ModuleMembership[,]==Module_number)]
+      Module_protein_coding_gene_list<-sapply(Module_protein_coding_genes_full_name, function(x) strsplit(x, "\\|"))
+      if(length(Module_protein_coding_gene_list[[1]])==1)
+      {
+        #NOT FULL GENECODE NAME, ONLY ONE NAME PER GENE!
+        Module_protein_coding_genes<-Module_protein_coding_genes_full_name
+      }
+      else{
+        #FULL GENECODE ANNOTATION!
+        Module_protein_coding_genes<-sapply(Module_protein_coding_gene_list, function(x) x[[6]])
+        Module_protein_coding_genes<-unname(Module_protein_coding_genes)
+      }
+      
+      
+      Modules_lncRNAs_full_name<-names(which(boot_results$RegulatoryPrograms[Module_number,]!=0))
+      Modules_lncRNAs_list<-sapply(Modules_lncRNAs_full_name, function(x) strsplit(x, "\\|"))
+      if(length(Modules_lncRNAs_list[[1]])==1)
+      {
+        #NOT FULL GENECODE NAME, ONLY ONE NAME PER GENE!
+        Modules_lncRNAs<-Modules_lncRNAs_full_name
+      }
+      else{
+        #FULL GENECODE ANNOTATION!
+        Modules_lncRNAs<-sapply(Modules_lncRNAs_list, function(x) x[[6]])
+        Modules_lncRNAs<-unname(Modules_lncRNAs)
+      }
+      
+      
+      
+      modules[[enriched_idx]]<-list(
+        protein_coding_genes=Module_protein_coding_genes_full_name, 
+        lncRNAs=Modules_lncRNAs_full_name, 
+        regulatory_program=boot_results$RegulatoryPrograms[Module_number,],
+        training_stats=boot_results$trainingStats[Module_number,],
+        test_stats=results$bootstrapTestStats[[idx_bootstrap]][Module_number],
+        assigned_genes=which(boot_results$ModuleMembership[,]==Module_number),
+        bootstrap_idx=idx_bootstrap
+      )
+      enriched_idx<-enriched_idx+1
+    }
+  }
+  return(modules)
+  
+}
+
 LINKER_plot_enrichement_bootstrap<-function(Gene_set_Collections,results,FDR=0.05){
   
   NrSims<-length(results)

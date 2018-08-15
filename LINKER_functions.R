@@ -110,7 +110,7 @@ run_linker_inference<-function(lognorm_est_counts, protein_filtered_idx, lincs_f
     
   }
   
-    return(bootstrap_results)
+    return(list(bootstrapResults=bootstrap_results))
 }
 
 LINKER_init <- function(MA_matrix_Var, RegulatorData, NrModules, NrCores=30, corrClustNrIter=21, Parameters) {
@@ -993,4 +993,39 @@ LINKER_run<-function(lognorm_est_counts, protein_filtered_idx, lincs_filtered_id
   return(list(raw_results=res,modules=modules,graphs=graphs, GEAs=GEAs))
   
 
+}
+
+LINKER_run_inference<-function(lognorm_est_counts, protein_filtered_idx, lincs_filtered_idx, Gene_set_Collections,
+                     link_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
+                     module_rep="MEAN",
+                     NrModules=100, 
+                     corrClustNrIter=100,
+                     Nr_bootstraps=10,
+                     FDR=0.05,
+                     NrCores=30,
+                     module_summary=0)
+  
+{
+  res<-list()
+  modules<-list()
+  
+  for(i in 1:length(link_mode)){
+    res[[ link_mode[i] ]]<-run_linker_inference(lognorm_est_counts, protein_filtered_idx,  lincs_filtered_idx, 
+                                          NrModules,NrCores=NrCores,
+                                          mode=link_mode[i], used_method=module_rep, 
+                                          corrClustNrIter=corrClustNrIter,Nr_bootstraps=Nr_bootstraps)
+    
+    modules[[ link_mode[i] ]]<-LINKER_extract_modules(res[[ link_mode[i] ]])
+    print(paste0("Link mode ",link_mode[i]," completed!"))  
+  }
+  
+  return(list(raw_results=res,modules=modules))
+  graphs<-LINKER_compute_graphs_from_modules(modules, lognorm_est_counts)
+  
+  #GEAs<-LINKER_compute_graph_enrichment_geneSets_graph_list(Gene_set_Collections,graphs,FDR=FDR,BC=1, NrCores = NrCores)
+  
+  #return(list(raw_results=res,modules=modules,graphs=graphs, GEAs=GEAs))
+  return(list(raw_results=res,modules=modules,graphs=graphs))
+  
+  
 }
