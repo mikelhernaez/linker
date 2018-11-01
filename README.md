@@ -12,8 +12,6 @@ In this work we analyze module-based network approaches to build gene regulatory
 
 # Methods
 
-```LINKER.R``` contain all the functions needed to reproduce the results shown in the paper. 
-
 The following libraries are needed to run the code:
 
     library("doParallel")
@@ -24,6 +22,11 @@ The following libraries are needed to run the code:
     library("Matrix")
     library("glmnet")
     library("colorspace")
+
+### Module-based approaches
+
+- ```LINKER.R``` contain all the functions needed to run the module-based approaches shown in the paper. 
+
     
 The main entry function on ```LINKER.R``` is 
 
@@ -55,6 +58,11 @@ Where
 - ```Nr_bootstraps```: Number of bootstrap of Phase I.
 - ```FDR```: The False Discovery Rate correction used for the enrichment analysis.
 - ``` NrCores```: Nr of computer cores for the parallel parts of the method. Note that the parallelization is NOT initialized in any of the functions.
+
+### Single gene-regulatory network approaches
+
+### Plotting functions
+
 
 
 # Example
