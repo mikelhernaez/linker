@@ -59,6 +59,7 @@ Where
 - ```FDR```: The False Discovery Rate correction used for the enrichment analysis.
 - ``` NrCores```: Nr of computer cores for the parallel parts of the method. Note that the parallelization is NOT initialized in any of the functions.
 
+
 ### Single gene network approaches
 
 ```NET.R``` contain all the functions needed to run the module-based approaches shown in the paper. 
@@ -71,7 +72,7 @@ The main entry function on ```NET.R``` is
                       target_filtered_idx, 
                       regulator_filtered_idx, 
                       Gene_set_Collections,
-                      mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
+                      graph_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
                       FDR=0.05,
                       NrCores=30)
   
@@ -82,13 +83,21 @@ Where
 -  ```target_filtered_idx```: Index of the target genes on the ```lognorm_est_counts``` matrix.
 -  ```regulator_filtered_idx```: Index of the regulatory genes on the ```lognorm_est_counts``` matrix.
 - ```Gene_set_Collections```: Known collection of gene sets for enrichment tests. 
-- ```network_mode```: Chosen method(s) to generate the edges in the network. The available options are ```"VBSR", "LASSOmin", "LASSO1se" and "LM"```.
+- ```graph_mode```: Chosen method(s) to generate the edges in the network. The available options are ```"VBSR", "LASSOmin", "LASSO1se" and "LM"```.
 - ```FDR```: The False Discovery Rate correction used for the enrichment analysis.
 - ``` NrCores```: Nr of computer cores for the parallel parts of the method. Note that the parallelization is NOT initialized in any of the functions.
 
-### Plotting functions
+### Other functions
 
+```plot_functions.R``` contains the needed functions to generate the plots shown in the paper
+```simulated_data.R``` contains the functions to generate the simulated data used in the paper
+```clustering_evals.R``` contains the function to generate the clustering evaluations shown in the paper
 
+# Data
+
+The data used in the paper can be downloaded from: 
+
+ - TCGA_
 
 # Example
 
