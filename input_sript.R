@@ -47,9 +47,9 @@ testLinker<-LINKER_run(lognorm_est_counts, target_filtered_idx, regulator_filter
                            link_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
                            graph_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
                            module_rep="MEAN",
-                           NrModules=20, 
-                           corrClustNrIter=5,
-                           Nr_bootstraps=2,
+                           NrModules=100, 
+                           corrClustNrIter=50,
+                           Nr_bootstraps=10,
                            FDR=0.05,
                            NrCores=20)
 
