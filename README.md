@@ -91,9 +91,7 @@ Where
 
 ```plot_functions.R``` contains the needed functions to generate the plots shown in the paper.
 
-```simulated_data.R``` contains the functions to generate the simulated data used in the paper.
-
-```clustering_evals.R``` contains the function to generate the clustering evaluations shown in the paper.
+```simulated_data.R``` contains the functions to generate the simulated data used in the paper and to generate the clustering evaluation plots.
 
 
 # Data
