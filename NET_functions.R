@@ -1,26 +1,47 @@
-NET_compute_graph_all_VBSR<-function(Data, lincs_idx, pc_idx)
+NET_run<-function(lognorm_est_counts, target_filtered_idx, regulator_filtered_idx, Gene_set_Collections,
+                  graph_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
+                  FDR=0.05,
+                  NrCores=30)
+{
+  graphs<-list()
+  for(j in 1:length(graph_mode)){
+    graphs[[ graph_mode[j] ]] <- switch( graph_mode[j],
+                                         "VBSR" = NET_compute_graph_all_VBSR(lognorm_est_counts, regulator_filtered_idx, target_filtered_idx),
+                                         "LASSOmin" = NET_compute_graph_all_LASSOmin(lognorm_est_counts, regulator_filtered_idx, target_filtered_idx),
+                                         "LASSO1se" = NET_compute_graph_all_LASSO1se(lognorm_est_counts, regulator_filtered_idx, target_filtered_idx),
+                                         "LM" = NET_compute_graph_all_LM(lognorm_est_counts, regulator_filtered_idx, target_filtered_idx)
+    )
+    print(paste0("Graphs for (" ,graph_mode[j], ") computed!"))    
+  }
+  
+  all_GEAs<-NET_compute_graph_enrichment_geneSets_graph_list(pathway_genes,graphs,FDR=FDR,BC=1, NrCores = NrCores)
+  
+  return(list(graphs=graphs,GEAs=all_GEAs))
+}
+
+NET_compute_graph_all_VBSR<-function(Data, regulators_idx, target_idx)
 {
   
-  X<-Data[lincs_idx,]
+  X<-Data[regulators_idx,]
   
-  driverMat<-matrix(data = NA, nrow = length(pc_idx), ncol = length(lincs_idx))
+  driverMat<-matrix(data = NA, nrow = length(target_idx), ncol = length(regulators_idx))
   
   #compute the VBSR
-  driverMat<-foreach(idx_gene=1:length(pc_idx), .combine = rbind, .packages = "vbsr")%dopar%
+  driverMat<-foreach(idx_gene=1:length(target_idx), .combine = rbind, .packages = "vbsr")%dopar%
   {
-    y<-Data[pc_idx[idx_gene],]
+    y<-Data[target_idx[idx_gene],]
     res<-vbsr(y,t(X),n_orderings = 15,family='normal')
     betas<-res$beta
-    betas[res$pval > 0.05/(length(pc_idx)*length(lincs_idx))]<-0
+    betas[res$pval > 0.05/(length(target_idx)*length(regulators_idx))]<-0
     betas
   }
-  rownames(driverMat)<-rownames(Data)[pc_idx]
-  colnames(driverMat)<-rownames(Data)[lincs_idx]
+  rownames(driverMat)<-rownames(Data)[target_idx]
+  colnames(driverMat)<-rownames(Data)[regulators_idx]
   
   regulated_genes<-which(rowSums(abs(driverMat))!=0)
-  regulatory_lncRNAs<-which(colSums(abs(driverMat))!=0)
+  regulatory_genes<-which(colSums(abs(driverMat))!=0)
   driverMat<-driverMat[regulated_genes,]
-  driverMat<-driverMat[,regulatory_lncRNAs]
+  driverMat<-driverMat[,regulatory_genes]
   
   g<-graph_from_incidence_matrix(driverMat)
   
@@ -28,17 +49,17 @@ NET_compute_graph_all_VBSR<-function(Data, lincs_idx, pc_idx)
   
 }
 
-NET_compute_graph_all_LASSOmin<-function(Data, lincs_idx, pc_idx, alpha=1-1e-06)
+NET_compute_graph_all_LASSOmin<-function(Data, regulators_idx, target_idx, alpha=1-1e-06)
 {
   
-  X<-Data[lincs_idx,]
+  X<-Data[regulators_idx,]
   
-  driverMat<-matrix(data = NA, nrow = length(pc_idx), ncol = length(lincs_idx))
+  driverMat<-matrix(data = NA, nrow = length(target_idx), ncol = length(regulators_idx))
   
   #compute the LASSOmin
-  driverMat<-foreach(idx_gene=1:length(pc_idx), .combine = rbind, .packages="glmnet")%dopar%
+  driverMat<-foreach(idx_gene=1:length(target_idx), .combine = rbind, .packages="glmnet")%dopar%
   {
-    y<-Data[pc_idx[idx_gene],]
+    y<-Data[target_idx[idx_gene],]
     fit = cv.glmnet(t(X), y, alpha = alpha)
     
     b_o = coef(fit,s = fit$lambda.min)
@@ -46,13 +67,13 @@ NET_compute_graph_all_LASSOmin<-function(Data, lincs_idx, pc_idx, alpha=1-1e-06)
     b_opt
   }
 
-  rownames(driverMat)<-rownames(Data)[pc_idx]
-  colnames(driverMat)<-rownames(Data)[lincs_idx]
+  rownames(driverMat)<-rownames(Data)[target_idx]
+  colnames(driverMat)<-rownames(Data)[regulators_idx]
   
   regulated_genes<-which(rowSums(abs(driverMat))!=0)
-  regulatory_lncRNAs<-which(colSums(abs(driverMat))!=0)
+  regulatory_genes<-which(colSums(abs(driverMat))!=0)
   driverMat<-driverMat[regulated_genes,]
-  driverMat<-driverMat[,regulatory_lncRNAs]
+  driverMat<-driverMat[,regulatory_genes]
   
   g<-graph_from_incidence_matrix(driverMat)
   
@@ -60,17 +81,17 @@ NET_compute_graph_all_LASSOmin<-function(Data, lincs_idx, pc_idx, alpha=1-1e-06)
   
 }
 
-NET_compute_graph_all_LASSO1se<-function(Data, lincs_idx, pc_idx, alpha=1-1e-06)
+NET_compute_graph_all_LASSO1se<-function(Data, regulators_idx, target_idx, alpha=1-1e-06)
 {
   
-  X<-Data[lincs_idx,]
+  X<-Data[regulators_idx,]
   
-  driverMat<-matrix(data = NA, nrow = length(pc_idx), ncol = length(lincs_idx))
+  driverMat<-matrix(data = NA, nrow = length(target_idx), ncol = length(regulators_idx))
   
   #compute the LASSO1se
-  driverMat<-foreach(idx_gene=1:length(pc_idx), .combine = rbind, .packages="glmnet")%dopar%
+  driverMat<-foreach(idx_gene=1:length(target_idx), .combine = rbind, .packages="glmnet")%dopar%
   {
-    y<-Data[pc_idx[idx_gene],]
+    y<-Data[target_idx[idx_gene],]
     fit = cv.glmnet(t(X), y, alpha = alpha)
     
     b_o = coef(fit,s = fit$lambda.1se)
@@ -78,13 +99,13 @@ NET_compute_graph_all_LASSO1se<-function(Data, lincs_idx, pc_idx, alpha=1-1e-06)
     b_opt
   }
   
-  rownames(driverMat)<-rownames(Data)[pc_idx]
-  colnames(driverMat)<-rownames(Data)[lincs_idx]
+  rownames(driverMat)<-rownames(Data)[target_idx]
+  colnames(driverMat)<-rownames(Data)[regulators_idx]
   
   regulated_genes<-which(rowSums(abs(driverMat))!=0)
-  regulatory_lncRNAs<-which(colSums(abs(driverMat))!=0)
+  regulatory_genes<-which(colSums(abs(driverMat))!=0)
   driverMat<-driverMat[regulated_genes,]
-  driverMat<-driverMat[,regulatory_lncRNAs]
+  driverMat<-driverMat[,regulatory_genes]
   
   g<-graph_from_incidence_matrix(driverMat)
   
@@ -92,26 +113,26 @@ NET_compute_graph_all_LASSO1se<-function(Data, lincs_idx, pc_idx, alpha=1-1e-06)
   
 }
 
-NET_compute_graph_all_LM<-function(Data, lincs_idx, pc_idx)
+NET_compute_graph_all_LM<-function(Data, regulators_idx, target_idx)
 {
-  GEA_per_linc<-list()
+  GEA_per_regulator<-list()
   i<-1
   
-  X<-t(Data[lincs_idx,])
+  X<-t(Data[regulators_idx,])
   
   
-  #driverMat<-matrix(data = 0, nrow = length(pc_idx), ncol = length(lincs_idx))
+  #driverMat<-matrix(data = 0, nrow = length(target_idx), ncol = length(regulators_idx))
   
-  #pc_idx=1:100
-  #lincs_idx=1:10
+  #target_idx=1:100
+  #regulators_idx=1:10
   #compute the LM
-  NrTotalEdges<-length(pc_idx)*length(lincs_idx)
+  NrTotalEdges<-length(target_idx)*length(regulators_idx)
   Pthre<-0.05/(NrTotalEdges)
-  driverMat<-foreach(idx_gene=1:length(pc_idx), .combine=rbind)%dopar%
-  #for(idx_gene in 1:length(pc_idx))
+  driverMat<-foreach(idx_gene=1:length(target_idx), .combine=rbind)%dopar%
+  #for(idx_gene in 1:length(target_idx))
     
   {
-    y<-Data[pc_idx[idx_gene],]
+    y<-Data[target_idx[idx_gene],]
     #NET_compute_LM_from_gene(y,X,Pthre)
     driverVec<-numeric(length=ncol(X))
     for(i in 1:ncol(X))
@@ -124,16 +145,16 @@ NET_compute_graph_all_LM<-function(Data, lincs_idx, pc_idx)
     driverVec
   }
 
-  protein_coding_genes<-rownames(Data)[pc_idx]
-  lncRNAs<-rownames(Data)[lincs_idx]
+  target_genes<-rownames(Data)[target_idx]
+  regulators<-rownames(Data)[regulators_idx]
   
-  rownames(driverMat)<-protein_coding_genes
-  colnames(driverMat)<-lncRNAs
+  rownames(driverMat)<-target_genes
+  colnames(driverMat)<-regulatory_genes
   
   regulated_genes<-which(rowSums(abs(driverMat))!=0)
-  regulatory_lncRNAs<-which(colSums(abs(driverMat))!=0)
+  regulatory_genes<-which(colSums(abs(driverMat))!=0)
   driverMat<-driverMat[regulated_genes,]
-  driverMat<-driverMat[,regulatory_lncRNAs]
+  driverMat<-driverMat[,regulatory_genes]
   
   g<-graph_from_incidence_matrix(driverMat)
   
@@ -154,48 +175,47 @@ NET_compute_LM_from_gene<-function(y,X,Pthre){
   return(driverVec)
 }
 
-NET_compute_linc_enrichment_from_graph<-function(g, Gene_set_Collections,FDR=0.05, BC=1, NrCores=1)
+##################### Enrichment Functions ##############################
+NET_compute_regulator_enrichment_from_graph<-function(g, Gene_set_Collections,FDR=0.05, BC=1, NrCores=1)
 {
   
-  linc_neighbors<-sapply(V(g)[V(g)$type==1], function(x) neighbors(g,x))
+  regulator_neighbors<-sapply(V(g)[V(g)$type==1], function(x) neighbors(g,x))
   
   registerDoParallel(NrCores)
   
-  GEA<-mclapply(linc_neighbors,function(x) gene_enrichment_per_module(names(x), Gene_set_Collections, FDR, BC))
+  GEA<-mclapply(regulator_neighbors,function(x) NET_module_gene_enrichment(names(x), Gene_set_Collections, FDR, BC))
   
-  path_lincs<-unlist(lapply(GEA,function(x) unlist(x)))
-  unique_paths_linc<-unique(names(path_lincs))
-  GEA_per_linc<-path_lincs[unique_paths_linc]
+  path_regulators<-unlist(lapply(GEA,function(x) unlist(x)))
+  unique_paths_regulator<-unique(names(path_regulators))
+  GEA_per_regulator<-path_regulators[unique_paths_regulator]
   
-  return(GEA_per_linc)
+  return(GEA_per_regulator)
   
 }
 
 NET_compute_graph_enrichment_geneSets<-function(pathway_genes,g,FDR=0.05,BC=1, NrCores=1)
 {
   GEA<-list()
-  Num_lincs<-sum(V(g)$type==1)
-  #BC<-Num_lincs*BC
+  Num_regulators<-sum(V(g)$type==1)
+  #BC<-Num_regulators*BC
   # BIOCARTA
   Gene_set_Collections<-pathway_genes[c(1)]
-  GEA$BIOCARTA<-NET_compute_linc_enrichment_from_graph(g, Gene_set_Collections,FDR=FDR, BC=BC, NrCores=NrCores)
+  GEA$BIOCARTA<-NET_compute_regulator_enrichment_from_graph(g, Gene_set_Collections,FDR=FDR, BC=BC, NrCores=NrCores)
   # KEGG
   Gene_set_Collections<-pathway_genes[c(2)]
-  GEA$KEGG<-NET_compute_linc_enrichment_from_graph(g, Gene_set_Collections,FDR=FDR, BC=BC,NrCores=NrCores)
+  GEA$KEGG<-NET_compute_regulator_enrichment_from_graph(g, Gene_set_Collections,FDR=FDR, BC=BC,NrCores=NrCores)
   # REACTOME
   Gene_set_Collections<-pathway_genes[c(3)]
-  GEA$REACTOME<-NET_compute_linc_enrichment_from_graph(g, Gene_set_Collections,FDR=FDR, BC=BC,NrCores=NrCores)
+  GEA$REACTOME<-NET_compute_regulator_enrichment_from_graph(g, Gene_set_Collections,FDR=FDR, BC=BC,NrCores=NrCores)
   # GENESIGDB
   Gene_set_Collections<-pathway_genes[c(4)]
-  GEA$GENESIGDB<-NET_compute_linc_enrichment_from_graph(g, Gene_set_Collections,FDR=FDR, BC=BC,NrCores=NrCores)
+  GEA$GENESIGDB<-NET_compute_regulator_enrichment_from_graph(g, Gene_set_Collections,FDR=FDR, BC=BC,NrCores=NrCores)
   # ALL
   #Gene_set_Collections<-pathway_genes[c(3,4,5,12)]
-  #GEA$ALL<-LINKER_compute_linc_enrichment_from_graph(g, Gene_set_Collections,FDR=FDR, BC=BC)
+  #GEA$ALL<-LINKER_compute_regulator_enrichment_from_graph(g, Gene_set_Collections,FDR=FDR, BC=BC)
   
   return(GEA)
 }
-
-
 
 NET_compute_graph_enrichment_geneSets_graph_list<-function(pathway_genes,g,FDR=0.05,BC=1, NrCores=1)
 {
@@ -213,19 +233,74 @@ NET_compute_graph_enrichment_geneSets_graph_list<-function(pathway_genes,g,FDR=0
   return(GEA)
 }
 
-NET_networks_creation<-function(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx,pathway_genes)
+######################### Main Enrichment Test Function ########################
+NET_module_gene_enrichment <-function(Module, pathway_genes, FDR=0.05, BC=1, total_genes=10000)
 {
-  all_g<-list()
-  all_g$VBSR<-NET_compute_graph_all_VBSR(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx)
-  print("VBSR done!")
-  all_g$LASSOmin<-NET_compute_graph_all_LASSOmin(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx)
-  print("LASSOmin done!")
-  all_g$LASSO1se<-NET_compute_graph_all_LASSO1se(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx)
-  print("LASSO1se done!")
-  all_g$LM<-NET_compute_graph_all_LM(lognorm_est_counts, lincs_filtered_idx, protein_filtered_idx)
-  print("LM done!")
   
-  all_GEAs<-NET_compute_graph_enrichment_geneSets_graph_list(pathway_genes,all_g,FDR=0.05,BC=1)
+  i<-1
+  #under_enrichment_pvalues<-numeric()
+  over_enrichment_pvalues<-numeric()
+  for(collection_idx in 1:length(pathway_genes)){
     
-  return(list(graphs=all_g,GEAs=all_GEAs))
+    for(pathway_idx in 1:length(pathway_genes[[collection_idx]])){
+      
+      white_balls<-length(pathway_genes[[collection_idx]][[pathway_idx]])
+      black_balls<-total_genes - white_balls
+      
+      drawn<-length(Module)
+      drawn_whites<-length(which(pathway_genes[[collection_idx]][[pathway_idx]] %in% Module))
+      
+      #under_enrichment_pvalues[i]<- phyper(drawn_whites, white_balls, black_balls, drawn, lower.tail = TRUE, log.p = FALSE)
+      over_enrichment_pvalues[i]<- phyper(drawn_whites-1, white_balls, black_balls, drawn, lower.tail = FALSE, log.p = FALSE)
+      i<-i+1
+    }
+  }
+  
+  if(BC<0){
+    #under_adjp<-under_adjp*(-BC)
+    over_adjp<-over_adjp*(-BC)
+  }
+  
+  else{
+    #under_adjp<-p.adjust(under_enrichment_pvalues,'fdr')
+    over_adjp<-p.adjust(over_enrichment_pvalues,'fdr')
+    #under_adjp<-under_adjp*BC
+    over_adjp<-over_adjp*BC
+  }
+  
+  
+  
+  i<-1
+  GEA_over<-list()
+  #GEA_under<-list()
+  for(collection_idx in 1:length(pathway_genes))  
+  {
+    j<-1
+    jj<-1
+    #GEA_under[[collection_idx]]<-numeric()
+    GEA_over[[collection_idx]]<-numeric()
+    gensetNames_over<-character()
+    #gensetNames_under<-character()
+    for(pathway_idx in 1:length(pathway_genes[[collection_idx]]))
+    {
+      if(over_adjp[i]<FDR){
+        GEA_over[[collection_idx]][j]<-over_adjp[i]
+        gensetNames_over[j]<-names(pathway_genes[[collection_idx]])[pathway_idx]
+        j<-j+1
+      }
+      
+      # if(under_adjp[i]<FDR){
+      #   GEA_under[[collection_idx]][jj]<-over_adjp[i]
+      #   gensetNames_under[jj]<-names(pathway_genes[[collection_idx]])[pathway_idx]
+      #   jj<-jj+1
+      # }
+      i<-i+1
+    }
+    names(GEA_over[[collection_idx]])<-gensetNames_over
+    #names(GEA_under[[collection_idx]])<-gensetNames_under
+  }
+  #return(list(GEA_under, GEA_over))
+  return(GEA_over)
 }
+##
+

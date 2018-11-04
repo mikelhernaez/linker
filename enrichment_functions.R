@@ -862,5 +862,15 @@ LINKER_plot_GEAs_boots<-function(GEAs, modules)
   #strsplit(names(GEA_REA_LM), "\\.[^\\.]*$")
   
 }
+layout.by.attr <- function(graph, wc, cluster.strength=1,layout=layout.auto) {  
+  g <- graph.edgelist(get.edgelist(graph)) # create a lightweight copy of graph w/o the attributes.
+  E(g)$weight <- 1
+  
+  attr <- cbind(id=1:vcount(g), val=wc)
+  g <- g + vertices(unique(attr[,2])) + igraph::edges(unlist(t(attr)), weight=cluster.strength)
+  
+  l <- layout(g, weights=E(g)$weight)[1:vcount(graph),]
+  return(l)
+}
 
 

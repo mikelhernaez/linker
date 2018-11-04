@@ -1,4 +1,44 @@
-run_linker<-function(lognorm_est_counts, target_filtered_idx, regulator_filtered_idx, NrModules, module_summary, 
+LINKER_run<-function(lognorm_est_counts, target_filtered_idx, regulator_filtered_idx, Gene_set_Collections,
+                     link_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
+                     graph_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
+                     module_rep="MEAN",
+                     NrModules=100, 
+                     corrClustNrIter=100,
+                     Nr_bootstraps=10,
+                     FDR=0.05,
+                     NrCores=30)
+  
+{
+  res<-list()
+  modules<-list()
+  graphs<-list()
+  for(i in 1:length(link_mode)){
+    res[[ link_mode[i] ]]<-LINKER_runPhase1(lognorm_est_counts, target_filtered_idx,  regulator_filtered_idx, 
+                                      NrModules,NrCores=NrCores,
+                                      mode=link_mode[i], used_method=module_rep, 
+                                      corrClustNrIter=corrClustNrIter,Nr_bootstraps=Nr_bootstraps)
+    
+    modules[[ link_mode[i] ]]<-LINKER_extract_modules(res[[ link_mode[i] ]])
+    print(paste0("Link mode ",link_mode[i]," completed!"))  
+    
+    graphs[[ link_mode[i] ]]<-list()
+    for(j in 1:length(graph_mode)){
+      graphs[[ link_mode[i] ]][[ graph_mode[j] ]] <- LINKER_compute_modules_graph(modules[[ link_mode[i] ]], lognorm_est_counts, mode=graph_mode[j])
+      print(paste0("Graphs for (",link_mode[i],",",graph_mode[j], ") computed!"))    
+    }
+    
+  }
+  
+  GEAs<-LINKER_compute_graph_enrichment_geneSets_graph_list(Gene_set_Collections,graphs,FDR=FDR,BC=1, NrCores = NrCores)
+  
+  return(list(raw_results=res,modules=modules,graphs=graphs, GEAs=GEAs))
+  
+  
+}
+
+############# PHASE 1 functions ###################
+
+LINKER_runPhase1<-function(lognorm_est_counts, target_filtered_idx, regulator_filtered_idx, NrModules, 
                      Lambda=0.0001, alpha=1-1e-06,
                      pmax=10, mode="LASSO", used_method="LINKER",
                      NrCores=30, corrClustNrIter=21,
@@ -50,68 +90,10 @@ run_linker<-function(lognorm_est_counts, target_filtered_idx, regulator_filtered
   }
   
   
-  if(module_summary==0){
-    return(list(bootstrapResults=bootstrap_results,bootstrapTestStats=EvaluateTestSet))
-  }
+  return(list(bootstrapResults=bootstrap_results,bootstrapTestStats=EvaluateTestSet))
   
-  # bootstrap_modules[[boost_idx]]<-list()
-  # for(i in 1:bootstrap_results[[boost_idx]]$NrModules){
-  #   
-  #   module_genes<-bootstrap_results[[boost_idx]]$AllGenes[which(bootstrap_results[[boost_idx]]$ModuleMembership==i)]
-  #   module_gene_description_list<-sapply(module_genes, function(x) strsplit(x, "\\|"))
-  #   bootstrap_modules[[boost_idx]][[i]]<-sapply(module_gene_description_list, function(x) x[[6]])
-  # }
-  
-  #corrClust_results<-list(bootstrap_modules, EvaluateTestSet, bootstrap_results)
-  
-  bootstrap_matrix<-LINKER_filterModuleBootstraps(bootstrap_results,EvaluateTestSet)
-  
-  consensus_modules<-LINKER_consensusClustering_IPC(bootstrap_matrix)
-  
-  regulators<-LINKER_compute_regulators(MA_matrix_Var_train_val, Regulator_data_train_val, consensus_modules, Parameters)
-  
-  testResults<-LINKER_EvaluateTestSet(regulators,MA_matrix_Var_test,Regulator_data_test, used_method=Parameters$used_method)
-  
-  printf("NrModules %d:\n",nrow(testResults))
-  print(apply(testResults, 2, mean))
-  
-  return(list(consensusTestStats=testResults, consensusResults=regulators, bootstrapResults=bootstrap_results,bootstrapTestStats=EvaluateTestSet))
-
 }
 
-run_linker_inference<-function(lognorm_est_counts, target_filtered_idx, regulator_filtered_idx, NrModules, module_summary, 
-                     Lambda=0.0001, alpha=1-1e-06,
-                     pmax=10, mode="LASSO", used_method="LINKER",
-                     NrCores=30, corrClustNrIter=21,
-                     Nr_bootstraps=1)
-{
-  
-  # Creating the parameters structure
-  Parameters <- list(Lambda=Lambda,pmax=pmax,alpha=alpha, mode=mode, used_method=used_method)
-  sample_size<-dim(lognorm_est_counts)[2]
-  
-  bootstrap_modules<-list()
-  bootstrap_results<-list()
-  
-  for(boost_idx in 1:Nr_bootstraps)
-  {
-    
-    regulator_matrix = t(scale(t(lognorm_est_counts[regulator_filtered_idx,])))    
-    
-    target_matrix = t(scale(t(lognorm_est_counts[target_filtered_idx,])))
-    
-    LINKERinit<-LINKER_init(MA_matrix_Var = target_matrix, RegulatorData = regulator_matrix, NrModules = NrModules, NrCores=NrCores, corrClustNrIter=corrClustNrIter, Parameters = Parameters )
-    
-    
-    tmp<-LINKER_corrClust(LINKERinit)
-    bootstrap_results[[boost_idx]]<-tmp
-    
-    printf("Bootstrap %d, NrModules %d:\n", boost_idx, bootstrap_results[[boost_idx]]$NrModules)
-    
-  }
-  
-    return(list(bootstrapResults=bootstrap_results))
-}
 
 LINKER_init <- function(MA_matrix_Var, RegulatorData, NrModules, NrCores=30, corrClustNrIter=21, Parameters) {
   
@@ -204,7 +186,6 @@ LINKER_init <- function(MA_matrix_Var, RegulatorData, NrModules, NrCores=30, cor
   return(list(MA_matrix_Var=MA_matrix_Var,RegulatorData=RegulatorData,ModuleMembership=ModuleMembership,Parameters=Parameters, NrCores=NrCores, corrClustNrIter=corrClustNrIter))
   
 }
-
 
 LINKER_corrClust <- function(LINKERinit){
   
@@ -519,7 +500,7 @@ LINKER_ReassignGenesToClusters <- function(Data,RegulatorData,Beta,Clusters){
         MaxCorrelation = max(corr,na.rm=TRUE)
         MaxPosition = which(signif(corr,digits=7) == signif(MaxCorrelation,digits=7))
         MaxPosition = MaxPosition[1] # this is new, to avoid two different reassignements
-
+        
         nc[j] = MaxPosition
         
       }
@@ -561,472 +542,363 @@ LINKER_EvaluateTestSet <- function(LINKERresults,MA_Data_TestSet,RegulatorData_T
     # drop=FALSE, this solves the problem when you have only one regulator, so the previous version is not needed.
     predictions = (t(RegulatorData_TestSet[currentRegulators,,drop=FALSE])) %*% (currentWeights) # need to make sure that the first argument remains a matrix.
     predictions = data.matrix(predictions)
-      if (length(modules[[i]]) !=0) {
-        if (length(currentClusterGenes)>1){
-          cx <- MA_Data_TestSet[currentClusterGenes,]
-          module_SVD = svd(cx)
-          
-          if(used_method=="LINKER"){
-            outcome <- module_SVD$v[,1]
-            if(cor(predictions,outcome)<0)
-            {
-              outcome <- -outcome
-            }
-            #outcome<-scale(outcome, center = FALSE)
+    if (length(modules[[i]]) !=0) {
+      if (length(currentClusterGenes)>1){
+        cx <- MA_Data_TestSet[currentClusterGenes,]
+        module_SVD = svd(cx)
+        
+        if(used_method=="LINKER"){
+          outcome <- module_SVD$v[,1]
+          if(cor(predictions,outcome)<0)
+          {
+            outcome <- -outcome
           }
-          else{
-            outcome<-apply(cx,2,mean)
-          }
-          
-          varEx<-module_SVD$d[1]^2/sum(module_SVD$d^2)
-        } else {
-          outcome = MA_Data_TestSet[currentClusterGenes,]
-          varEx<-0
+          #outcome<-scale(outcome, center = FALSE)
+        }
+        else{
+          outcome<-apply(cx,2,mean)
         }
         
-        module_data<-MA_Data_TestSet[currentClusterGenes,]
-        if(nrow(t(module_data))== 1){
-          module_data<-t(module_data)
-        }
-        inmodule_corr<-abs(cor(t(module_data),outcome))
-        meanInModuleCor<-mean(inmodule_corr)
-        
-        homogeneity<-abs(cor(t(module_data),t(module_data)))
-        homogeneity<-(sum(homogeneity)-dim(homogeneity)[1])/((dim(homogeneity)[1]-1)*(dim(homogeneity)[1]-1))
-        
-        # using explained variance as metric, since mean square error is not
-        # enough, no baseline interpretation possible
-        
-        SStot = sum((outcome-mean(outcome))^2)
-        SSres = sum((predictions-outcome)^2)
-        Rsquare = 1 - (SSres / SStot)
-        RsquareAjusted = 1 - (1-Rsquare)*( (nrSamples-1)/(nrSamples - length(currentRegulators)))
-        
-        stats[i,3] = meanInModuleCor
-        stats[i,4] = Rsquare
-        stats[i,5] = RsquareAjusted
-        stats[i,6]<-homogeneity
-        stats[i,7]<- varEx
+        varEx<-module_SVD$d[1]^2/sum(module_SVD$d^2)
       } else {
-        
+        outcome = MA_Data_TestSet[currentClusterGenes,]
+        varEx<-0
       }
+      
+      module_data<-MA_Data_TestSet[currentClusterGenes,]
+      if(nrow(t(module_data))== 1){
+        module_data<-t(module_data)
+      }
+      inmodule_corr<-abs(cor(t(module_data),outcome))
+      meanInModuleCor<-mean(inmodule_corr)
+      
+      homogeneity<-abs(cor(t(module_data),t(module_data)))
+      homogeneity<-(sum(homogeneity)-dim(homogeneity)[1])/((dim(homogeneity)[1]-1)*(dim(homogeneity)[1]-1))
+      
+      # using explained variance as metric, since mean square error is not
+      # enough, no baseline interpretation possible
+      
+      SStot = sum((outcome-mean(outcome))^2)
+      SSres = sum((predictions-outcome)^2)
+      Rsquare = 1 - (SSres / SStot)
+      RsquareAjusted = 1 - (1-Rsquare)*( (nrSamples-1)/(nrSamples - length(currentRegulators)))
+      
+      stats[i,3] = meanInModuleCor
+      stats[i,4] = Rsquare
+      stats[i,5] = RsquareAjusted
+      stats[i,6]<-homogeneity
+      stats[i,7]<- varEx
+    } else {
+      
+    }
   }
   dimnames(stats) <- list(rownames(stats, do.NULL = FALSE, prefix = "Module_"), c("nrReg" , "nrGen", "MeanInModuleCorr", "Rsquare","RsquareAdjusted", "homogeneity", "condition"))
-
+  
   return(stats)
 }
 
-LINKER_filterModuleBootstraps<-function(bootstrap_results,EvaluateTestSet)
-{
+LINKER_extract_modules<-function(results){
   
-  threashold<-0 # Let more clusters in
-  field_to_filter<-3 #Use the R2 to filter rather than adj R2
-  bootstrap_matrix<-sapply(bootstrap_results, function(x) x$ModuleMembership)
-  rownames(bootstrap_matrix)<-bootstrap_results[[1]]$AllGenes
-  
-  filterField<-sapply(EvaluateTestSet, function(x) x[,field_to_filter])
-  
-  bad_modules<-sapply(filterField, function(x) which(x<threashold))
-  NrGenes<-dim(bootstrap_matrix)[1]
-  NrBootstraps<-dim(bootstrap_matrix)[2]
-  for(i in 1:NrBootstraps)
-  {
-    idx<-which(bootstrap_matrix[, i] %in% bad_modules[[i]])
-    bootstrap_matrix[idx, i]<-0
-  }
-  
-  # idx<-1
-  # genesToRemove<-numeric()
-  # for(i in 1:NrGenes)
-  # {
-  #   if(sum(bootstrap_matrix[i,]==0)>0.3*NrBootstraps)
-  #   {
-  #     genesToRemove[idx]<-i
-  #     idx<-idx+1
-  #   }
-  # }
-  # if(idx>1)
-  # {
-  #   bootstrap_matrix<-bootstrap_matrix[-genesToRemove,]
-  # }
-  
-  #print(idx)
-  return(bootstrap_matrix)
-}
-
-
-LINKER_consensusClustering<-function(bootstrap_matrix)
-{
-  
-  library(plyr)
-  
-  NrIter<-100
-  
-  consensus_clusters<-list()
-  idx<-1
-  
-  NrGenes<-dim(bootstrap_matrix)[1]
-  NrBootstraps<-dim(bootstrap_matrix)[2]
-  consensusClust<-numeric(NrGenes)
-  NrClusterVec<-apply(bootstrap_matrix,2,function(x)length(unique(x)))
-  largest_bootstrap_idx<-which(NrClusterVec==max(NrClusterVec))[1]
-  NrClusters<-max(NrClusterVec)
-  K<-floor(NrGenes/NrClusters)
-  
-  gene_idxs<-1:NrGenes
-  # for(i in 1:(NrClusters-1))
-  # {
-  #   gene_sampled<-sample(gene_idxs,K,replace = FALSE)
-  #   consensusClust[gene_sampled]<-i
-  #   gene_idxs<-gene_idxs[-which(gene_idxs %in% gene_sampled)]
-  # }
-  
-  
-  consensusClust<-bootstrap_matrix[,largest_bootstrap_idx]
-  
-  #consensusClust[gene_idxs]<-NrClusters
-  cluster_rep<-matrix(0,nrow = NrClusters, ncol = NrBootstraps)
-  
-  for (iter in 1:NrIter)
-  {
-    
-    # Compute Cluster Rep
-    
-    ClustersToRemove<-numeric(0)
-    ctr<-1
-    for (i in 1:NrClusters)
-    {
-      #get genes from cluster i
-      cluster_genes<-which(consensusClust == i)
-      if(length(cluster_genes) < 2)
-      {
-        ClustersToRemove[ctr]<-i
-        ctr<-ctr+1
-        next
-      }
-      cluster_matrix<-bootstrap_matrix[cluster_genes,]
-      cluster_counts<-apply(cluster_matrix, 2, count)
-      cluster_rep[i,]<-sapply(cluster_counts, function(x) x[which.max(x$freq),1])
-    }
-    if(length(ClustersToRemove)>1)
-    {
-      cluster_rep<-cluster_rep[-ClustersToRemove,]
-      NrClusters<-nrow(cluster_rep)
-    }
-    
-    #Assign genes to clusters
-    for (gene_idx in 1:NrGenes)
-    {
-      min_dist<-NrBootstraps+1
-      for (i in 1:NrClusters)
-      {
-        #compute distance with rep i
-        tmp_dist<-length(which(cluster_rep[i,] != bootstrap_matrix[gene_idx,]))
-        if(tmp_dist<min_dist){
-          min_dist<-tmp_dist
-          consensusClust[gene_idx]<-i
-        }
-      }
-    }
-    
-  }
-  
-  # cluster_metric<-numeric(NrClusters)
-  # cluster_sizes<-numeric(NrClusters)
-  # for (i in 1:NrClusters)
-  # {
-  #   cluster_genes<-which(consensusClust == i)
-  #   cluster_matrix<-bootstrap_matrix[cluster_genes,]
-  #   hamm_dist<-apply(cluster_matrix, 1, function(x) length(which(cluster_rep[i,] != x)))
-  #   cluster_metric[i]<-mean(hamm_dist)
-  #   cluster_sizes[i]<-length(cluster_genes)
-  #   
-  #   if(cluster_metric[i] < 4)
-  #   {
-  #     bad_genes<-which(hamm_dist > 7)
-  #     if(length(bad_genes)>0)
-  #     {
-  #       consensus_clusters[[idx]]<-rownames(cluster_matrix[-bad_genes,])
-  #     }
-  #     else
-  #     {
-  #       consensus_clusters[[idx]]<-rownames(cluster_matrix)
-  #     }
-  #     
-  #     idx<-idx+1
-  #   }
-  # }
-  
-  return(consensusClust)
-}
-
-LINKER_consensusClustering_IPC<-function(bootstrap_matrix)
-{
-  
-  library(plyr)
-  
-  NrIter<-100
-  
-  consensus_clusters<-list()
-  idx<-1
-  
-  NrGenes<-dim(bootstrap_matrix)[1]
-  NrBootstraps<-dim(bootstrap_matrix)[2]
-  consensusClust<-numeric(NrGenes)
-  newConsensusClust<-numeric(NrGenes)
-  NrClusterVec<-apply(bootstrap_matrix,2,function(x)length(unique(x)))
-  largest_bootstrap_idx<-which(NrClusterVec==max(NrClusterVec))[1]
-
-  rnd_bootstrap_idx<-sample(NrBootstraps, 1)
-  consensusClust<-bootstrap_matrix[,rnd_bootstrap_idx]
-  
-  clustID<-unique(consensusClust)
-  NrClusters<-length(clustID)
-  
-  gene_idxs<-1:NrGenes
-  
-  similarity_matrix<-matrix(nrow = NrGenes, ncol = NrGenes)
-  for(i in 1:NrGenes){
-    for(j in 1:NrGenes){
-      similarity_matrix[i,j]<-sum(bootstrap_matrix[i,]==bootstrap_matrix[j,])
-    }
-  }
-  
-  for (iter in 1:NrIter)
-  {
-    #Assign genes to clusters
-    for (gene_idx in 1:NrGenes)
-    {
-      # assign gene to most similar cluster
-      max_dist<-0
-      temp_dist<-0
-      for (i in 1:NrClusters)
-      {
-        #compute distance with cluster i
-        cluster_genes<-which(consensusClust == clustID[i])
-        if(length(cluster_genes)<2){
-          #print("foooooo")
-        }
-        tmp_dist<-sum(apply(as.matrix(cluster_genes), 1, function(x)similarity_matrix[x,gene_idx]))/length(cluster_genes)
-        if(tmp_dist>max_dist){
-          max_dist<-tmp_dist
-          newConsensusClust[gene_idx]<-i
-        }
-      }
-    }
-    if(sum(consensusClust==newConsensusClust)==length(consensusClust)){
-      break
-    }
-    consensusClust<-newConsensusClust
-    clustID<-unique(consensusClust)
-    NrClusters<-length(clustID)
-    
-  }
-  
- 
-  
-  return(consensusClust)
-}
-
-LINKER_compute_regulators<-function(Data, RegulatorData, Clusters, Parameters)
-{
-  
-  # valid_genes<-numeric()
-  # NrModules<-length(consensus_modules)
-  # for(i in 1:length(consensus_modules))
-  # {
-  #   valid_genes<-c(valid_genes,which(rownames(Data) %in% consensus_modules[[i]]))
-  # }
-  # Data<-Data[valid_genes,]
-  # 
-  # Clusters<-numeric(length=nrow(Data))
-  # names(Clusters) <- rownames(Data)
-  # for(i in 1:length(consensus_modules))
-  # {
-  #   module_genes<-which(rownames(Data) %in% consensus_modules[[i]])
-  #   Clusters[module_genes]<-i
-  # }
-  
-  regulatoryPrograms_results <- LINKER_LearnRegulatoryPrograms(Data,Clusters,RegulatorData,Lambda=Paramters$Lambda,alpha=Parameters$alpha,pmax=Parameters$pmax, mode=Parameters$mode, used_method=Parameters$used_method)
-  
-  
-  Results<-list(NrModules=length(unique(Clusters)), RegulatoryPrograms=regulatoryPrograms_results$Beta, ModuleMembership=as.matrix(Clusters), AllGenes=rownames(Data))
-  
-  return(Results)
-}
-
-
-LINKER_createBootstrapGraph<-function(bootstrap_results, bootstrap_modules)
-{
-  
-  over_enrichment_pvalues<-numeric()
-  p_idx<-1
-  total_genes<-10000
-  
-  Nr_bootstraps<-length(bootstrap_results)
-  
-  for(i in 1: Nr_bootstraps){
-    
-    Nr_modules_source<-bootstrap_results[[i]]$NrModules
-    
-    ## compare the old bootsrap modules with the modules on the rest of bootstraps
-    for(j in 1:Nr_modules_source){
-      
-      for(ii in 1: Nr_bootstraps){
-        
-        Nr_modules_sink<-bootstrap_results[[ii]]$NrModules
-        
-        for(jj in 1:Nr_modules_sink){
-          
-          white_balls<-length(bootstrap_modules[[i]][[j]])
-          black_balls<-total_genes - white_balls
-          
-          drawn<-length(bootstrap_modules[[ii]][[jj]])
-          drawn_whites<-length(which(bootstrap_modules[[i]][[j]] %in% bootstrap_modules[[ii]][[jj]]))
-          
-          over_enrichment_pvalues[p_idx]<- phyper(drawn_whites-1, white_balls, black_balls, drawn, lower.tail = FALSE, log.p = FALSE)
-          p_idx<-p_idx+1
-        }
-      }
-    }
-  }
-  
-  over_adjp<-p.adjust(over_enrichment_pvalues,'holm')
-  
-  over_adjp_Matrix<- matrix(over_adjp, nrow = sqrt(length(over_adjp)), byrow = TRUE)
-  
-  enriched_idx<-which(over_adjp_Matrix<1e-10,arr.ind=TRUE)
-  
-  adj_sparseMatrix_graph<-sparseMatrix(enriched_idx[,1], enriched_idx[,2])
-  
-  bootstrap_graph<-graph_from_adjacency_matrix(as.matrix(adj_sparseMatrix_graph), mode = "directed",  diag = FALSE)
-  
-  bootstrap_comm<-cluster_walktrap(bootstrap_graph, weights = E(bootstrap_graph)$weight, steps = 4,
-                                   merges = TRUE, modularity = TRUE, membership = TRUE)
-  
-  return(list(bootstrap_graph, bootstrap_comm))
-}
-
-LINKER_createEnrichedGraph<-function(enriched_modules)
-{
-  
-  over_enrichment_pvalues<-numeric()
-  p_idx<-1
-  total_genes<-10000
-  
-
-    
-    Nr_modules<-length(enriched_modules)
-    
-    ## compare the old bootsrap modules with the modules on the rest of bootstraps
-  for(j in 1:Nr_modules){
-      
-      for(jj in 1:Nr_modules){
-        
-        white_balls<-length(enriched_modules[[j]]$target_coding_genes)
-        black_balls<-total_genes - white_balls
-        
-        drawn<-length(enriched_modules[[jj]]$target_coding_genes)
-        drawn_whites<-length(which(enriched_modules[[jj]]$target_coding_genes %in% enriched_modules[[j]]$target_coding_genes))
-        
-        over_enrichment_pvalues[p_idx]<- phyper(drawn_whites-1, white_balls, black_balls, drawn, lower.tail = FALSE, log.p = FALSE)
-        p_idx<-p_idx+1
-      }
-  }
-  
-  over_adjp<-p.adjust(over_enrichment_pvalues,'holm')
-  
-  over_adjp_Matrix<- matrix(over_adjp, nrow = sqrt(length(over_adjp)), byrow = TRUE)
-  
-  enriched_idx<-which(over_adjp_Matrix<0.05,arr.ind=TRUE)
-  
-  adj_sparseMatrix_graph<-sparseMatrix(enriched_idx[,1], enriched_idx[,2])
-  
-  bootstrap_graph<-graph_from_adjacency_matrix(as.matrix(adj_sparseMatrix_graph), mode = "undirected",  diag = FALSE)
-  
-  bootstrap_comm<-cluster_walktrap(bootstrap_graph, weights = E(bootstrap_graph)$weight, steps = 4,
-                                   merges = TRUE, modularity = TRUE, membership = TRUE)
-  
-  return(list(bootstrap_graph, bootstrap_comm))
-}
-
-LINKER_computeBootstrapModuleEnrichment<-function(old_modules, bootstrap_modules)
-{
-  
-  
-  
-  #### Compare the new results to the old modules
-  
-  
-  return(enriched_modules)
-  
-}
-
-
-
-LINKER_run_inference<-function(lognorm_est_counts, target_filtered_idx, regulator_filtered_idx, Gene_set_Collections,
-                     link_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
-                     module_rep="MEAN",
-                     NrModules=100, 
-                     corrClustNrIter=100,
-                     Nr_bootstraps=10,
-                     FDR=0.05,
-                     NrCores=30,
-                     module_summary=0)
-  
-{
-  res<-list()
   modules<-list()
   
-  for(i in 1:length(link_mode)){
-    res[[ link_mode[i] ]]<-run_linker_inference(lognorm_est_counts, target_filtered_idx,  regulator_filtered_idx, 
-                                          NrModules,NrCores=NrCores,
-                                          mode=link_mode[i], used_method=module_rep, 
-                                          corrClustNrIter=corrClustNrIter,Nr_bootstraps=Nr_bootstraps)
+  enriched_idx<-1
+  NrBootstraps<-length(results$bootstrapResult)
+  for(idx_bootstrap in 1:NrBootstraps){
     
-    modules[[ link_mode[i] ]]<-LINKER_extract_modules(res[[ link_mode[i] ]])
-    print(paste0("Link mode ",link_mode[i]," completed!"))  
+    NrModules<-results$bootstrapResult[[idx_bootstrap]]$NrModules
+    boot_results<-results$bootstrapResult[[idx_bootstrap]]
+    
+    for(Module_number in 1: NrModules){
+      
+      Module_target_genes_full_name<-boot_results$AllGenes[which(boot_results$ModuleMembership[,]==Module_number)]
+      Module_target_gene_list<-sapply(Module_target_genes_full_name, function(x) strsplit(x, "\\|"))
+      if(length(Module_target_gene_list[[1]])==1)
+      {
+        #NOT FULL GENECODE NAME, ONLY ONE NAME PER GENE!
+        Module_target_genes<-Module_target_genes_full_name
+      }
+      else{
+        #FULL GENECODE ANNOTATION!
+        Module_target_genes<-sapply(Module_target_gene_list, function(x) x[[6]])
+        Module_target_genes<-unname(Module_target_genes)
+      }
+      
+      
+      Modules_regulators_full_name<-names(which(boot_results$RegulatoryPrograms[Module_number,]!=0))
+      Modules_regulators_list<-sapply(Modules_regulators_full_name, function(x) strsplit(x, "\\|"))
+      if(length(Modules_regulators_list[[1]])==1)
+      {
+        #NOT FULL GENECODE NAME, ONLY ONE NAME PER GENE!
+        Modules_regulators<-Modules_regulators_full_name
+      }
+      else{
+        #FULL GENECODE ANNOTATION!
+        Modules_regulators<-sapply(Modules_regulators_list, function(x) x[[6]])
+        Modules_regulators<-unname(Modules_regulators)
+      }
+      
+      
+      
+      modules[[enriched_idx]]<-list(
+        target_genes=Module_target_genes_full_name, 
+        regulators=Modules_regulators_full_name, 
+        regulatory_program=boot_results$RegulatoryPrograms[Module_number,],
+        training_stats=boot_results$trainingStats[Module_number,],
+        test_stats=results$bootstrapTestStats[[idx_bootstrap]][Module_number],
+        assigned_genes=which(boot_results$ModuleMembership[,]==Module_number),
+        bootstrap_idx=idx_bootstrap
+      )
+      enriched_idx<-enriched_idx+1
+    }
   }
-  
-  return(list(raw_results=res,modules=modules))
-  graphs<-LINKER_compute_graphs_from_modules(modules, lognorm_est_counts)
-  
-  #GEAs<-LINKER_compute_graph_enrichment_geneSets_graph_list(Gene_set_Collections,graphs,FDR=FDR,BC=1, NrCores = NrCores)
-  
-  #return(list(raw_results=res,modules=modules,graphs=graphs, GEAs=GEAs))
-  return(list(raw_results=res,modules=modules,graphs=graphs))
+  return(modules)
   
 }
 
-LINKER_run<-function(lognorm_est_counts, target_filtered_idx, regulator_filtered_idx, Gene_set_Collections,
-                     link_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
-                     module_rep="MEAN",
-                     NrModules=100, 
-                     corrClustNrIter=100,
-                     Nr_bootstraps=10,
-                     FDR=0.05,
-                     NrCores=30,
-                     module_summary=0)
-  
+######### Phase2 Functions ##########
+
+LINKER_compute_modules_graph<-function(modules, Data, mode="VBSR",alpha=1-1e-06)
 {
-  res<-list()
-  modules<-list()
   
-  for(i in 1:length(link_mode)){
-    res[[ link_mode[i] ]]<-run_linker(lognorm_est_counts, target_filtered_idx,  regulator_filtered_idx, 
-                                      NrModules, module_summary,NrCores=NrCores,
-                                      mode=link_mode[i], used_method=module_rep, 
-                                      corrClustNrIter=corrClustNrIter,Nr_bootstraps=Nr_bootstraps)
+  bp_g<-list()
+  i<-1
+  
+  bp_g<-foreach(mod_idx=1:length(modules), .packages = c("vbsr","glmnet","igraph"))%dopar%
+    #for(mod_idx in 1:length(modules))
+  {
+    targetgenes<-unlist(modules[[mod_idx]]$target_genes)
+    regulators<-unlist(modules[[mod_idx]]$regulators)
+    X<-Data[regulators,]
     
-    modules[[ link_mode[i] ]]<-LINKER_filter_enriched_modules(Gene_set_Collections,res[[ link_mode[i] ]],FDR)
-    print(paste0("Link mode ",link_mode[i]," completed!"))  
+    #We need to handle the special case where only one regulator regulates a module/community
+    if(length(regulators)<2){
+      
+      non_zero_beta<-modules[[mod_idx]]$regulatory_program[which(modules[[mod_idx]]$regulatory_program != 0)]
+      if(length(non_zero_beta) != 1){
+        warning("NON_ZERO_BETA != 1")
+      }
+      
+      driverMat<-matrix(data = non_zero_beta, nrow = length(targetgenes), ncol = length(regulators))
+      
+      rownames(driverMat)<-targetgenes
+      colnames(driverMat)<-regulators
+    }
+    else{
+      
+      driverMat<-matrix(data = NA, nrow = length(targetgenes), ncol = length(regulators))
+      
+      for(idx_gene in 1:length(targetgenes))
+      {
+        y<-Data[targetgenes[idx_gene],]
+        
+        if(mode=="VBSR")
+        {
+          res<-vbsr(y,t(X),n_orderings = 15,family='normal')
+          betas<-res$beta
+          betas[res$pval > 0.05/(length(regulators)*length(targetgenes))]<-0
+          driverMat[idx_gene,]<-betas
+        }
+        else if(mode=="LASSOmin")
+        {
+          fit = cv.glmnet(t(X), y, alpha = alpha)
+          
+          b_o = coef(fit,s = fit$lambda.min)
+          b_opt <- c(b_o[2:length(b_o)]) # removing the intercept.
+          driverMat[idx_gene,]<-b_opt 
+        }
+        else if(mode=="LASSO1se")
+        {
+          fit = cv.glmnet(t(X), y, alpha = alpha)
+          
+          b_o = coef(fit,s = fit$lambda.1se)
+          b_opt <- c(b_o[2:length(b_o)]) # removing the intercept.
+          driverMat[idx_gene,]<-b_opt 
+        }
+        else if(mode=="LM")
+        {
+          for(idx_regs in 1:length(regulators))
+          {
+            x<-t(X)[,idx_regs]
+            fit = lm(y~x)
+            s<-summary(fit)
+            driverMat[idx_gene,idx_regs]<-s$coefficients[2,"Pr(>|t|)"]<0.05/(length(targetgenes)*length(regulators))
+          }
+        }
+        else
+        {
+          warning("MODE NOT RECOGNIZED")
+        }
+        
+      }
+      
+      rownames(driverMat)<-targetgenes
+      colnames(driverMat)<-regulators
+      
+      regulated_genes<-which(rowSums(abs(driverMat))!=0)
+      regulatory_genes<-which(colSums(abs(driverMat))!=0)
+      
+      # We need to treat the special cases independently
+      if(length(regulated_genes)<2){
+        driverMat<-driverMat[regulated_genes,]
+        driverMat<-driverMat[regulatory_genes]
+      }
+      else if(length(regulatory_genes)<2){
+        driverMat<-driverMat[,regulatory_genes]
+        driverMat<-driverMat[regulated_genes]
+      }
+      else{
+        driverMat<-driverMat[,regulatory_genes]
+        driverMat<-driverMat[regulated_genes,]
+      }
+      
+    }
+    
+    #bp_g[[i]]<-
+    graph_from_incidence_matrix(driverMat)
+    #i<-i+1
   }
   
-  graphs<-LINKER_compute_graphs_from_modules(modules, lognorm_est_counts)
+  return(bp_g)
+}
+
+############## Gene enrichment functions #####################
+
+#WARNING: The functions expect the gene annotation either using the full Genecode annotation or just the Gene name
+
+LINKER_compute_graph_enrichment_geneSets_graph_list<-function(pathway_genes,g,FDR=0.05,BC=1, NrCores=1)
+{
   
-  GEAs<-LINKER_compute_graph_enrichment_geneSets_graph_list(Gene_set_Collections,graphs,FDR=FDR,BC=1, NrCores = NrCores)
+  GEA<-list()
   
-  return(list(raw_results=res,modules=modules,graphs=graphs, GEAs=GEAs))
+  for(i in 1:length(g))
+  {
+    link_mode<-names(g)[i]
+    GEA[[ link_mode ]]<-list()
+    
+    for(j in 1:length(g[[link_mode]]))
+    {
+      graph_mode<-names(g[[link_mode]])[j]
+      GEA[[ link_mode ]][[graph_mode]]<-LINKER_compute_graph_list_enrichment_geneSets(pathway_genes,g[[link_mode]][[graph_mode]], BC=BC, NrCores=NrCores)
+      print(paste0("GEA for (",link_mode,",",graph_mode, ") computed!"))      
+    }
+  }
   
+  return(GEA)
+}
+
+LINKER_compute_graph_list_enrichment_geneSets<-function(pathway_genes,g_list,FDR=0.05,BC=1, NrCores=1)
+{
+  GEA<-list()
+  
+  Num_regs<-sapply(g_list, function(x) sum(V(x)$type==1))
+  #BC<-mean(Num_regs)*BC
+  # BIOCARTA
+  Gene_set_Collections<-pathway_genes[1]
+  GEA$BIOCARTA<-LINKER_compute_reg_enrichment_from_graph_list(g_list, Gene_set_Collections,FDR=FDR, BC=BC,NrCores=NrCores)
+  # KEGG
+  Gene_set_Collections<-pathway_genes[2]
+  GEA$KEGG<-LINKER_compute_reg_enrichment_from_graph_list(g_list, Gene_set_Collections,FDR=FDR, BC=BC,NrCores=NrCores)
+  # REACTOME
+  Gene_set_Collections<-pathway_genes[3]
+  GEA$REACTOME<-LINKER_compute_reg_enrichment_from_graph_list(g_list, Gene_set_Collections,FDR=FDR, BC=BC,NrCores=NrCores)
+  # GENESIGDB
+  Gene_set_Collections<-pathway_genes[4]
+  GEA$GENESIGDB<-LINKER_compute_reg_enrichment_from_graph_list(g_list, Gene_set_Collections,FDR=FDR, BC=BC,NrCores=NrCores)
+  # ALL
+  #Gene_set_Collections<-pathway_genes[c(3,4,5,12)]
+  #GEA$ALL<-LINKER_compute_reg_enrichment_from_graph_list(g_list, Gene_set_Collections,FDR=FDR, BC=BC)
+  
+  return(GEA)
+}
+
+LINKER_compute_reg_enrichment_from_graph_list<-function(g_list, Gene_set_Collections,FDR=0.05, BC=1,NrCores=1)
+{
+  
+  #registerDoParallel(NrCores)
+  path_regs<-list()
+  for(i in 1:length(g_list))
+  {
+    g<-g_list[[i]]
+    reg_neighbors<-sapply(V(g)[V(g)$type==1], function(x) neighbors(g,x))
+    GEA<-mclapply(reg_neighbors,function(x) LINKER_module_gene_enrichment(names(x), Gene_set_Collections, FDR, BC))
+    path_regs[[i]]<-unlist(lapply(GEA,function(x) unlist(x)))
+  }
+  
+  #path_regs<-unlist(path_regs)
+  #unique_paths_reg<-unique(names(path_regs))
+  #GEA_per_reg<-path_regs[unique_paths_reg]
+  
+  return(path_regs)
   
 }
+
+## This function computes the enrichment analysis from a set of genes
+LINKER_module_gene_enrichment <-function(Module, pathway_genes, FDR=0.05, BC=1, total_genes=10000)
+{
+  
+  i<-1
+  #under_enrichment_pvalues<-numeric()
+  over_enrichment_pvalues<-numeric()
+  for(collection_idx in 1:length(pathway_genes)){
+    
+    for(pathway_idx in 1:length(pathway_genes[[collection_idx]])){
+      
+      white_balls<-length(pathway_genes[[collection_idx]][[pathway_idx]])
+      black_balls<-total_genes - white_balls
+      
+      drawn<-length(Module)
+      drawn_whites<-length(which(pathway_genes[[collection_idx]][[pathway_idx]] %in% Module))
+      
+      #under_enrichment_pvalues[i]<- phyper(drawn_whites, white_balls, black_balls, drawn, lower.tail = TRUE, log.p = FALSE)
+      over_enrichment_pvalues[i]<- phyper(drawn_whites-1, white_balls, black_balls, drawn, lower.tail = FALSE, log.p = FALSE)
+      i<-i+1
+    }
+  }
+  
+  if(BC<0){
+    #under_adjp<-under_adjp*(-BC)
+    over_adjp<-over_adjp*(-BC)
+  }
+  
+  else{
+    #under_adjp<-p.adjust(under_enrichment_pvalues,'fdr')
+    over_adjp<-p.adjust(over_enrichment_pvalues,'fdr')
+    #under_adjp<-under_adjp*BC
+    over_adjp<-over_adjp*BC
+  }
+  
+  
+  
+  i<-1
+  GEA_over<-list()
+  #GEA_under<-list()
+  for(collection_idx in 1:length(pathway_genes))  
+  {
+    j<-1
+    jj<-1
+    #GEA_under[[collection_idx]]<-numeric()
+    GEA_over[[collection_idx]]<-numeric()
+    gensetNames_over<-character()
+    #gensetNames_under<-character()
+    for(pathway_idx in 1:length(pathway_genes[[collection_idx]]))
+    {
+      if(over_adjp[i]<FDR){
+        GEA_over[[collection_idx]][j]<-over_adjp[i]
+        gensetNames_over[j]<-names(pathway_genes[[collection_idx]])[pathway_idx]
+        j<-j+1
+      }
+      
+      # if(under_adjp[i]<FDR){
+      #   GEA_under[[collection_idx]][jj]<-over_adjp[i]
+      #   gensetNames_under[jj]<-names(pathway_genes[[collection_idx]])[pathway_idx]
+      #   jj<-jj+1
+      # }
+      i<-i+1
+    }
+    names(GEA_over[[collection_idx]])<-gensetNames_over
+    #names(GEA_under[[collection_idx]])<-gensetNames_under
+  }
+  #return(list(GEA_under, GEA_over))
+  return(GEA_over)
+}
+##

@@ -644,7 +644,7 @@ LINKER_plot_res_real_data<-function(results, file = "plots_real_data.pdf"){
   
   mar.default <- c(5,4,4,2) + 0.1
   par(mar = mar.default + c(0, 2, 0, 0)) 
-
+  
   RsquareAjusted<-list()
   RsquareAjusted_test<-list()
   RsquareAjusted_consensus<-list()
@@ -660,7 +660,7 @@ LINKER_plot_res_real_data<-function(results, file = "plots_real_data.pdf"){
     RsquareAjusted_test[[idx]]<-list(length = Nr_bootstraps)
     VarEx[[idx]]<-list(length = Nr_bootstraps)
     VarEx_test[[idx]]<-list(length = Nr_bootstraps)
-      
+    
     for(i in 1: Nr_bootstraps){
       
       RsquareAjusted[[idx]][[i]]<-rep(res$bootstrapResults[[i]]$trainingStats[,"RsquareAdjusted"],res$bootstrapResults[[i]]$trainingStats[,"nrGen"])
@@ -701,7 +701,7 @@ LINKER_plot_res_real_data<-function(results, file = "plots_real_data.pdf"){
     lines(h$mids, cdf, type = 'l', col = "red4", lty = "dotted")
   }
   
-
+  
   ##### Variance Explained ########
   h<-hist(unlist(VarEx[[1]]), plot = FALSE, breaks = "FD")
   cdf<-cumsum(h$counts)/sum(h$counts)
@@ -731,7 +731,7 @@ LINKER_plot_res_real_data<-function(results, file = "plots_real_data.pdf"){
     h<-hist(VarEx_test[[2]][[i]], plot = FALSE, breaks = "FD")
     cdf<-cumsum(h$counts)/sum(h$counts)
     lines(h$mids, cdf, type = 'l', col = "red4", lty = "solid")
-
+    
   }
   dev.off()
 }

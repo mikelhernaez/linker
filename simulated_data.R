@@ -1,34 +1,34 @@
 generate_sim_data<-function(regulatorData){
   
   NrSamples<-ncol(regulatorData)
-  NrLincs<-nrow(regulatorData)
+  NrRegulators<-nrow(regulatorData)
   NrModules<-40
   
   maxNrGenes<-10000
   
   ExpectedNrGenesPerModule<-100
-  ExpectedNrLincsPerModule<-5
+  ExpectedNrRegulatorsPerModule<-5
   
   NOISE_SD<-3
   
   Data<-matrix(data=NA, nrow = maxNrGenes, ncol = NrSamples )
-  #samples<-rnorm(NrLincs*NrSamples, mean= 0, sd = 1)
-  #lincMatrix<-matrix(samples, nrow=NrLincs, ncol = NrSamples)
+  #samples<-rnorm(NrRegulators*NrSamples, mean= 0, sd = 1)
+  #lincMatrix<-matrix(samples, nrow=NrRegulators, ncol = NrSamples)
   
-  modulesLincs<-matrix(data=NA,nrow=NrLincs, ncol=NrModules)
+  modulesRegulators<-matrix(data=NA,nrow=NrRegulators, ncol=NrModules)
   
   ClusterFirstRow<-1
   trueClustering<-numeric(length = maxNrGenes)
   for(i in 1:NrModules){
-    moduleLincs<-numeric(NrLincs)
-    while(sum(moduleLincs)==0){
-      moduleLincs<-rbinom(NrLincs, 1, ExpectedNrLincsPerModule/NrLincs)
+    moduleRegulators<-numeric(NrRegulators)
+    while(sum(moduleRegulators)==0){
+      moduleRegulators<-rbinom(NrRegulators, 1, ExpectedNrRegulatorsPerModule/NrRegulators)
     }
-    regulatorLincs<-which(moduleLincs==1)
-    betas<-rnorm(length(regulatorLincs), 0,1)
-    moduleLincs[regulatorLincs]<-betas
-    modulesLincs[,i]<-moduleLincs
-    module_mean<-moduleLincs%*%regulatorData
+    regulators<-which(moduleRegulators==1)
+    betas<-rnorm(length(regulators), 0,1)
+    moduleRegulators[regulators]<-betas
+    modulesRegulators[,i]<-moduleRegulators
+    module_mean<-moduleRegulators%*%regulatorData
     module_mean<-scale(as.vector(module_mean))
     
     NrGenesInModule<-rbinom(1, maxNrGenes, ExpectedNrGenesPerModule/maxNrGenes)
@@ -51,13 +51,13 @@ generate_sim_data<-function(regulatorData){
   trueClustering<-trueClustering[1:(ClusterFirstRow-1)]
   names(trueClustering)<-sapply(1:(ClusterFirstRow-1), toString)
   
-  Data[(ClusterFirstRow):(ClusterFirstRow+NrLincs-1),]<-regulatorData
+  Data[(ClusterFirstRow):(ClusterFirstRow+NrRegulators-1),]<-regulatorData
   
-  Data<-Data[1:(ClusterFirstRow+NrLincs-1),]
+  Data<-Data[1:(ClusterFirstRow+NrRegulators-1),]
   rownames(Data)<-c(sapply(1:(ClusterFirstRow-1), toString), rownames(regulatorData))
   
 
-  return(list(Data, 1:(ClusterFirstRow-1), (ClusterFirstRow):(ClusterFirstRow+NrLincs-1), modulesLincs, trueClustering))
+  return(list(Data, 1:(ClusterFirstRow-1), (ClusterFirstRow):(ClusterFirstRow+NrRegulators-1), modulesRegulators, trueClustering))
   
   
 }
