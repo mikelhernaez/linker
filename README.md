@@ -100,10 +100,10 @@ Where
 
 The data used in the paper can be downloaded from: 
 
- - Estimated counts of TCGA OV:
- - Estimated counts of TCGA HNSC:
+ - Estimated counts and TFs indexes for TCGA OV:
+ - Estimated counts and TFs indexes for TCGA HNSC:
  - Known Gene Sets:
 
 # Example
 
-```input_script.R``` contains an example script that loads the 
+```input_script.R``` contains an example script.
