@@ -25,7 +25,7 @@ The following libraries are needed to run the code:
 
 ### Module-based approaches
 
-- ```LINKER.R``` contain all the functions needed to run the module-based approaches shown in the paper. 
+```LINKER.R``` contain all the functions needed to run the module-based approaches shown in the paper. 
 
     
 The main entry function on ```LINKER.R``` is 
@@ -59,7 +59,32 @@ Where
 - ```FDR```: The False Discovery Rate correction used for the enrichment analysis.
 - ``` NrCores```: Nr of computer cores for the parallel parts of the method. Note that the parallelization is NOT initialized in any of the functions.
 
-### Single gene-regulatory network approaches
+### Single gene network approaches
+
+```NET.R``` contain all the functions needed to run the module-based approaches shown in the paper. 
+
+    
+The main entry function on ```NET.R``` is 
+
+    NET_run<-function(
+                      lognorm_est_counts, 
+                      target_filtered_idx, 
+                      regulator_filtered_idx, 
+                      Gene_set_Collections,
+                      mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
+                      FDR=0.05,
+                      NrCores=30)
+  
+Where 
+
+-  ```lognorm_est_counts```: Matrix of log-normalized estimated counts of the gene expression data (Nr Genes x Nr samples)
+  
+-  ```target_filtered_idx```: Index of the target genes on the ```lognorm_est_counts``` matrix.
+-  ```regulator_filtered_idx```: Index of the regulatory genes on the ```lognorm_est_counts``` matrix.
+- ```Gene_set_Collections```: Known collection of gene sets for enrichment tests. 
+- ```network_mode```: Chosen method(s) to generate the edges in the network. The available options are ```"VBSR", "LASSOmin", "LASSO1se" and "LM"```.
+- ```FDR```: The False Discovery Rate correction used for the enrichment analysis.
+- ``` NrCores```: Nr of computer cores for the parallel parts of the method. Note that the parallelization is NOT initialized in any of the functions.
 
 ### Plotting functions
 
