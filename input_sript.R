@@ -8,6 +8,8 @@ library("glmnet")
 library("colorspace")
 
 source('~/linker/LINKER.R')
+source('~/linker/NET_functions.R')
+source('~/linker/plot_functions.R')
 
 ########## Load the gene pathways for the enrichment analysis ##############################
 GENESETDB_Collections_GeneSymbol_v11<-readMat("./GENESETDB_Collections_GeneSymbol_v11.mat")
@@ -41,9 +43,9 @@ regulator_filtered_idx<-camodi_input_data$regulatorIdx
 Gene_set_Collections<-pathway_genes[c(3,4,5,12)]
 
 
-Foo_lin<-LINKER_run(lognorm_est_counts, target_filtered_idx[1:100], regulator_filtered_idx[1:10], Gene_set_Collections,
-                           link_mode=c("VBSR"),
-                           graph_mode=c("VBSR"),
+testLinker<-LINKER_run(lognorm_est_counts, target_filtered_idx, regulator_filtered_idx, Gene_set_Collections,
+                           link_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
+                           graph_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
                            module_rep="MEAN",
                            NrModules=20, 
                            corrClustNrIter=5,
@@ -51,11 +53,12 @@ Foo_lin<-LINKER_run(lognorm_est_counts, target_filtered_idx[1:100], regulator_fi
                            FDR=0.05,
                            NrCores=20)
 
-Foo<-NET_run(lognorm_est_counts, target_filtered_idx[1:100], regulator_filtered_idx[1:10], Gene_set_Collections,
-                  graph_mode=c("VBSR"),
+testNet<-NET_run(lognorm_est_counts, target_filtered_idx, regulator_filtered_idx, Gene_set_Collections,
+                  graph_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
                   FDR=0.05,
                   NrCores=30)
 
-LINKER_plot_res_real_data(Foo_lin$raw_results, file="foo.pdf")
-LINKER_plot_GEAs(GEAs)
-LINKER_plot_graphs_topology(graphs)
+LINKER_plot_res_real_data(testLinker$raw_results, file="plot.pdf")
+LINKER_plot_GEAs(testLinker$GEAs)
+LINKER_plot_graphs_topology(testLinker$graphs)
+#### NOTE: To add NET results to the plots, the $graph and $GEAs of both LinkerOutput and NetOutput must be concatenated. ####
