@@ -89,15 +89,20 @@ Where
 
 ### Other functions
 
-```plot_functions.R``` contains the needed functions to generate the plots shown in the paper
-```simulated_data.R``` contains the functions to generate the simulated data used in the paper
-```clustering_evals.R``` contains the function to generate the clustering evaluations shown in the paper
+```plot_functions.R``` contains the needed functions to generate the plots shown in the paper.
+
+```simulated_data.R``` contains the functions to generate the simulated data used in the paper.
+
+```clustering_evals.R``` contains the function to generate the clustering evaluations shown in the paper.
+
 
 # Data
 
 The data used in the paper can be downloaded from: 
 
- - TCGA_
+ - Estimated counts of TCGA OV:
+ - Estimated counts of TCGA HNSC:
+ - Known Gene Sets:
 
 # Example
 
