@@ -98,9 +98,9 @@ Where
 
 The data used in the paper can be downloaded from: 
 
- - Estimated counts and TFs indexes for TCGA OV:
- - Estimated counts and TFs indexes for TCGA HNSC:
- - Known Gene Sets:
+ - Estimated counts and TFs indexes for TCGA OV:[data/Tumor_HNSC50_to_R.mat](https://github.com/mikelhernaez/linker/blob/master/data/Tumor_HNSC50_to_R.mat)
+ - Estimated counts and TFs indexes for TCGA HNSC: [data/Tumor_OV50_to_R.mat](https://github.com/mikelhernaez/linker/blob/master/data/Tumor_OV50_to_R.mat)
+ - Known Gene Sets: [data/GENESETDB_Collections_GeneSymbol_v11.mat](https://github.com/mikelhernaez/linker/blob/master/data/GENESETDB_Collections_GeneSymbol_v11.mat)
 
 # Example
 
