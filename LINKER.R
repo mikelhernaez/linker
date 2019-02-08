@@ -206,7 +206,7 @@ LINKER_corrClust <- function(LINKERinit){
   NrCores<-LINKERinit$NrCores
   
   # this will register nr of cores/threads, keep this here so the user can decide how many cores based on their hardware.
-  #registerDoParallel(cores=NrCores)
+  registerDoParallel(cores=NrCores)
   ptm1 <- proc.time()
   
   RegulatorData_rownames=rownames(RegulatorData)
@@ -608,8 +608,8 @@ LINKER_extract_modules<-function(results){
     NrModules<-results$bootstrapResult[[idx_bootstrap]]$NrModules
     boot_results<-results$bootstrapResult[[idx_bootstrap]]
     
-    for(Module_number in 1: NrModules){
-      
+    for(Module_number in unique(boot_results$ModuleMembership[,])){
+
       Module_target_genes_full_name<-boot_results$AllGenes[which(boot_results$ModuleMembership[,]==Module_number)]
       Module_target_gene_list<-sapply(Module_target_genes_full_name, function(x) strsplit(x, "\\|"))
       if(length(Module_target_gene_list[[1]])==1)
@@ -625,6 +625,9 @@ LINKER_extract_modules<-function(results){
       
       
       Modules_regulators_full_name<-names(which(boot_results$RegulatoryPrograms[Module_number,]!=0))
+      if(length(Modules_regulators_full_name)==0){
+        next;
+      }
       Modules_regulators_list<-sapply(Modules_regulators_full_name, function(x) strsplit(x, "\\|"))
       if(length(Modules_regulators_list[[1]])==1)
       {
@@ -814,7 +817,7 @@ LINKER_compute_graph_list_enrichment_geneSets<-function(pathway_genes,g_list,FDR
 LINKER_compute_reg_enrichment_from_graph_list<-function(g_list, Gene_set_Collections,FDR=0.05, BC=1,NrCores=1)
 {
   
-  #registerDoParallel(NrCores)
+  registerDoParallel(NrCores)
   path_regs<-list()
   for(i in 1:length(g_list))
   {
