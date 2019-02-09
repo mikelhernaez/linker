@@ -607,10 +607,12 @@ LINKER_extract_modules<-function(results){
     
     NrModules<-results$bootstrapResult[[idx_bootstrap]]$NrModules
     boot_results<-results$bootstrapResult[[idx_bootstrap]]
+    boot_idx<-sort(unique(boot_results$ModuleMembership[,]))
     
-    for(Module_number in unique(boot_results$ModuleMembership[,])){
+    for(Module_number in 1:NrModules){
 
-      Module_target_genes_full_name<-boot_results$AllGenes[which(boot_results$ModuleMembership[,]==Module_number)]
+      
+      Module_target_genes_full_name<-boot_results$AllGenes[which(boot_results$ModuleMembership[,]==boot_idx[Module_number])]
       Module_target_gene_list<-sapply(Module_target_genes_full_name, function(x) strsplit(x, "\\|"))
       if(length(Module_target_gene_list[[1]])==1)
       {
