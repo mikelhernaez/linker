@@ -24,49 +24,9 @@ for(j in 1:length(graph_mode)){
   print(paste0("Done for (NET,",graph_mode[j], ") computed!"))    
 }
 
-AUC_regs_edge<-LINKER_plot_GEAs_norm_regs(GEAs, graphs,type="EDGE", max_y = c(0.3,0.6,0.6,2), min_x = c(-20,-50,-40,-50))
-AUC_regs_reg<-LINKER_plot_GEAs_norm_regs(GEAs, graphs,type="REG", max_y = c(.01,.03,.05,.1), min_x = c(-20,-50,-40,-50))
+draw_all(GEAs, graphs, FDR=0.05)
 
-AUC_sets_edge<-LINKER_plot_GEAs_norm_sets(GEAs, graphs,type="EDGE", max_y = c(0.3,2,0.6,20), min_x = c(-20,-50,-40,-50))
-AUC_sets_reg<-LINKER_plot_GEAs_norm_sets(GEAs, graphs,type="REG", max_y = c(0.01,.15,0.02,0.5), min_x = c(-20,-50,-40,-50))
-
-AUC_regsets_edge<-LINKER_plot_GEAs_norm_regsets(GEAs, graphs,type="EDGE", max_y = c(2,15,4,60), min_x = c(-20,-50,-40,-50))
-AUC_regsets_reg<-LINKER_plot_GEAs_norm_regsets(GEAs, graphs,type="REG", max_y = c(.1,2,.2,4), min_x = c(-20,-50,-40,-50))
-
-ggplot(AUC_regs_edge, aes(link_mode, Rank)) + geom_boxplot(aes(fill=DB)) + scale_y_reverse() +
-  stat_summary(fun.y = mean, geom = "errorbar", aes(ymax = ..y.., ymin = ..y..),width = .9, linetype = "dashed", color="red")+
-  #theme(axis.text.x = element_text(angle=65, vjust=0.6)) + 
-  labs(title="Rank of GEAreg elements per 1K graph edges", 
-       x="Method for generating the modules",
-       y="Rank")
-
-ggplot(AUC_regs_reg, aes(link_mode, Rank)) + geom_boxplot(aes(fill=DB)) + 
-  stat_summary(fun.y = mean, geom = "errorbar", aes(ymax = ..y.., ymin = ..y..),width = .9, linetype = "dashed", color="red")+
-  labs(title="Rank of GEAreg elements per graph regulator", 
-       x="Method for generating the modules",
-       y="Rank")
-
-ggplot(AUC_sets_edge, aes(link_mode, Rank)) + geom_boxplot(aes(fill=DB)) + 
-  stat_summary(fun.y = mean, geom = "errorbar", aes(ymax = ..y.., ymin = ..y..),width = .9, linetype = "dashed", color="red")+
-  labs(title="Rank of GEAset elements per 1K graph edges", 
-       x="Method for generating the modules",
-       y="Rank")
-
-ggplot(AUC_sets_reg, aes(link_mode, Rank)) + geom_boxplot(aes(fill=DB)) + 
-  stat_summary(fun.y = mean, geom = "errorbar", aes(ymax = ..y.., ymin = ..y..),width = .9, linetype = "dashed", color="red")+
-  labs(title="Rank of GEAset elements per graph regulator", 
-       x="Method for generating the modules",
-       y="Rank")
-
-ggplot(AUC_regsets_edge, aes(link_mode, Rank)) + geom_boxplot(aes(fill=DB)) + 
-  stat_summary(fun.y = mean, geom = "errorbar", aes(ymax = ..y.., ymin = ..y..),width = .9, linetype = "dashed", color="red")
-
-ggplot(AUC_regsets_reg, aes(link_mode, Rank)) + geom_boxplot(aes(fill=DB)) + 
-  stat_summary(fun.y = mean, geom = "errorbar", aes(ymax = ..y.., ymin = ..y..),width = .9, linetype = "dashed", color="red")
-
-
-
-#geom_point(data=AUC_regs_edge %>% group_by(link_mode) %>% summarise(ave = mean(Rank)),aes(link_mode,ave)) + 
+# 
 #HNSC
 link_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM")
 GEAs<-list()
@@ -93,14 +53,4 @@ for(j in 1:length(graph_mode)){
   print(paste0("Done for (NET,",graph_mode[j], ") computed!"))    
 }
 
-
-
-
-LINKER_plot_GEAs_norm_regs(GEAs, graphs,type="EDGE", max_y = c(0.3,0.6,0.6,2), min_x = c(-20,-50,-40,-50))
-LINKER_plot_GEAs_norm_regs(GEAs, graphs,type="REG", max_y = c(.01,.03,.05,.1), min_x = c(-20,-50,-40,-50))
-
-LINKER_plot_GEAs_norm_sets(GEAs, graphs,type="EDGE", max_y = c(0.3,0.6,0.6,2), min_x = c(-20,-50,-40,-50))
-LINKER_plot_GEAs_norm_sets(GEAs, graphs,type="REG", max_y = c(.01,.03,.05,.1), min_x = c(-20,-50,-40,-50))
-
-LINKER_plot_GEAs_norm_regsets(GEAs, graphs,type="EDGE", max_y = c(0.3,0.6,0.6,2), min_x = c(-20,-50,-40,-50))
-LINKER_plot_GEAs_norm_regsets(GEAs, graphs,type="REG", max_y = c(.1,.3,.5,1), min_x = c(-20,-50,-40,-50))
+draw_all(GEAs, graphs, FDR=0.05)

@@ -430,6 +430,7 @@ LINKER_plot_GEAs_norm_regsets<-function(GEAs, graphs, type="EDGE", max_y=c(1,1,1
       AUC[[ DB[k] ]][[ link_mode[i] ]]<-list()
       for(j in 1:length(net_mode)){
         if(length(unlist(GEAs[[ link_mode[i] ]][[ net_mode[j] ]][[ DB[k] ]]))==0){
+          AUC[[ DB[k] ]][[ link_mode[i] ]][[ net_mode[j] ]]<-0
           next;
         }
         
@@ -523,6 +524,7 @@ LINKER_plot_GEAs_norm_regs<-function(GEAs, graphs, type="EDGE", max_y=c(1,1,1,1)
       AUC[[ DB[k] ]][[ link_mode[i] ]]<-list()
       for(j in 1:length(net_mode)){
         if(length(unlist(GEAs[[ link_mode[i] ]][[ net_mode[j] ]][[ DB[k] ]]))==0){
+          AUC[[ DB[k] ]][[ link_mode[i] ]][[ net_mode[j] ]]<-0
           next;
         }
         
@@ -617,6 +619,7 @@ LINKER_plot_GEAs_norm_sets<-function(GEAs, graphs, type="EDGE", max_y=c(1,1,1,1)
       net_mode<-names(GEAs[[ link_mode[i] ]])
       for(j in 1:length(net_mode)){
         if(length(unlist(GEAs[[ link_mode[i] ]][[ net_mode[j] ]][[ DB[k] ]]))==0){
+          AUC[[ DB[k] ]][[ link_mode[i] ]][[ net_mode[j] ]]<-0
           next;
         }
         
@@ -683,6 +686,212 @@ LINKER_plot_GEAs_norm_sets<-function(GEAs, graphs, type="EDGE", max_y=c(1,1,1,1)
   AUC_df$Rank <- ave( -AUC_df$auc, AUC_df$DB, FUN=rank )
   return(AUC_df)
 }
+
+draw_all<-function(GEAs, graphs, FDR=0.05){
+
+  # Draw all GSEA cumm. counts plots and compute AUC
+  AUC_regs_edge<-LINKER_plot_GEAs_norm_regs(GEAs, graphs,type="EDGE", max_y = c(0.3,0.6,0.6,2), min_x = c(-20,-50,-40,-50))
+  AUC_regs_reg<-LINKER_plot_GEAs_norm_regs(GEAs, graphs,type="REG", max_y = c(.01,.03,.05,.1), min_x = c(-20,-50,-40,-50))
+  
+  AUC_sets_edge<-LINKER_plot_GEAs_norm_sets(GEAs, graphs,type="EDGE", max_y = c(0.3,2,0.6,20), min_x = c(-20,-50,-40,-50))
+  AUC_sets_reg<-LINKER_plot_GEAs_norm_sets(GEAs, graphs,type="REG", max_y = c(0.01,.15,0.02,0.5), min_x = c(-20,-50,-40,-50))
+  
+  AUC_regsets_edge<-LINKER_plot_GEAs_norm_regsets(GEAs, graphs,type="EDGE", max_y = c(2,15,4,60), min_x = c(-20,-50,-40,-50))
+  AUC_regsets_reg<-LINKER_plot_GEAs_norm_regsets(GEAs, graphs,type="REG", max_y = c(.1,2,.2,4), min_x = c(-20,-50,-40,-50))
+  
+  # Draw all AUC boxplots
+
+  #REGS_REG_LINK
+  ggplot(AUC_regs_reg, aes(link_mode, Rank)) + geom_boxplot(aes(fill=DB)) + 
+    geom_errorbar(data=AUC_regs_reg %>% group_by(link_mode) %>% dplyr::summarise(Rank = mean(Rank)),aes(x=link_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of GEAreg elements per graph regulator", 
+         x="Method for generating the modules",
+         y="Rank")+
+    scale_y_reverse()
+  #REGS_REG_NET
+  ggplot(AUC_regs_reg, aes(net_mode, Rank)) + geom_boxplot(aes(fill=DB)) + 
+    geom_errorbar(data=AUC_regs_reg %>% group_by(net_mode) %>% dplyr::summarise(Rank = mean(Rank)),aes(x=net_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of GEAreg elements per graph regulator", 
+         x="Method for generating the edges in the graph",
+         y="Rank")+
+    scale_y_reverse()
+  #SETS_REG_LINK
+  ggplot(AUC_sets_reg, aes(link_mode, Rank)) + geom_boxplot(aes(fill=DB)) + 
+    geom_errorbar(data=AUC_sets_reg %>% group_by(link_mode) %>% dplyr::summarise(Rank = mean(Rank)),aes(x=link_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of GEAset elements per graph regulator", 
+         x="Method for generating the modules",
+         y="Rank")+
+    scale_y_reverse()
+  #SETS_REG_NET
+  ggplot(AUC_sets_reg, aes(net_mode, Rank)) + geom_boxplot(aes(fill=DB)) + 
+    geom_errorbar(data=dplyr::summarize( AUC_sets_reg %>% group_by(net_mode) ,Rank = mean(Rank)),aes(x=net_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of GEAset elements per graph regulator", 
+         x="Method for generating the edges in the graph",
+         y="Rank")+
+    scale_y_reverse()
+  #REGSETS_REG_LINK
+  ggplot(AUC_regsets_reg, aes(link_mode, Rank)) + geom_boxplot(aes(fill=DB)) + 
+    geom_errorbar(data=dplyr::summarize( AUC_regsets_reg %>% group_by(link_mode) ,Rank = mean(Rank)),aes(x=link_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of GEAregset elements per graph regulator", 
+         x="Method for generating the modules",
+         y="Rank")+
+    scale_y_reverse()
+  #REGSETS_REG_NET
+  ggplot(AUC_regsets_reg, aes(net_mode, Rank)) + geom_boxplot(aes(fill=DB)) + 
+    geom_errorbar(data=dplyr::summarize( AUC_regsets_reg %>% group_by(net_mode) ,Rank = mean(Rank)),aes(x=net_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of GEAregset elements per graph regulator", 
+         x="Method for generating the edges in the graph",
+         y="Rank")+
+    scale_y_reverse()
+  
+  #REGS_EDGE_LINK
+  ggplot(AUC_regs_edge, aes(link_mode, Rank)) +geom_boxplot(aes(fill=DB)) + 
+    geom_errorbar(data=AUC_regs_edge %>% group_by(link_mode) %>% dplyr::summarise(Rank = mean(Rank)),aes(x=link_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of GEAreg elements per 1K graph edges", 
+         x="Method for generating the modules",
+         y="Rank")+
+    scale_y_reverse()
+  #REGS_EDGE_NET
+  ggplot(AUC_regs_edge, aes(net_mode, Rank)) +geom_boxplot(aes(fill=DB)) + 
+    geom_errorbar(data=AUC_regs_edge %>% group_by(net_mode) %>% dplyr::summarise(Rank = mean(Rank)),aes(x=net_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of GEAreg elements per 1K graph edges", 
+         x="Method for generating the edges in the graph",
+         y="Rank")+
+    scale_y_reverse()
+  #SETS_EDGE_LINK
+  ggplot(AUC_sets_edge, aes(link_mode, Rank)) +geom_boxplot(aes(fill=DB)) + 
+    geom_errorbar(data=AUC_sets_edge %>% group_by(link_mode) %>% dplyr::summarise(Rank = mean(Rank)),aes(x=link_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of GEAset elements per 1K graph edges", 
+         x="Method for generating the modules",
+         y="Rank")+
+    scale_y_reverse()
+  #SETS_EDGE_NET
+  ggplot(AUC_sets_edge, aes(net_mode, Rank)) +geom_boxplot(aes(fill=DB)) + 
+    geom_errorbar(data=AUC_sets_edge %>% group_by(net_mode) %>% dplyr::summarise(Rank = mean(Rank)),aes(x=net_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of GEAset elements per 1K graph edges", 
+         x="Method for generating the edges in the graph",
+         y="Rank")+
+    scale_y_reverse()
+  #REGSETS_EDGE_LINK
+  ggplot(AUC_regsets_edge, aes(link_mode, Rank)) +geom_boxplot(aes(fill=DB)) + 
+    geom_errorbar(data=dplyr::summarize( AUC_regsets_edge %>% group_by(link_mode) ,Rank = mean(Rank)),aes(x=link_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of GEAregset elements per 1K graph edges", 
+         x="Method for generating the modules",
+         y="Rank")+
+    scale_y_reverse()
+  #REGSETS_EDGE_NET
+  ggplot(AUC_regsets_edge, aes(net_mode, Rank)) +geom_boxplot(aes(fill=DB)) + 
+    geom_errorbar(data=dplyr::summarize( AUC_regsets_edge %>% group_by(net_mode) ,Rank = mean(Rank)),aes(x=net_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of GEAregset elements per 1K graph edges", 
+         x="Method for generating the edges in the graph",
+         y="Rank")+
+    scale_y_reverse()
+
+  
+  
+
+  colnames(AUC_regsets_edge)[which(names(AUC_regsets_edge) == "Rank")]<-"regset"
+  AUC_regsets_edge$auc<-NULL
+  colnames(AUC_regs_edge)[which(names(AUC_regs_edge) == "Rank")]<-"reg"
+  AUC_regs_edge$auc<-NULL
+  colnames(AUC_sets_edge)[which(names(AUC_sets_edge) == "Rank")]<-"set"
+  AUC_sets_edge$auc<-NULL
+  
+  RANKS_edge<-join_all(list(AUC_sets_edge,AUC_regsets_edge,AUC_regs_edge), by = c("DB","link_mode","net_mode"))
+  RANKS_edge<-gather(RANKS_edge, "GSEA_type","Rank", c("set", "regset", "reg"))
+  
+  colnames(AUC_regsets_reg)[which(names(AUC_regsets_reg) == "Rank")]<-"regset"
+  AUC_regsets_reg$auc<-NULL
+  colnames(AUC_regs_reg)[which(names(AUC_regs_reg) == "Rank")]<-"reg"
+  AUC_regs_reg$auc<-NULL
+  colnames(AUC_sets_reg)[which(names(AUC_sets_reg) == "Rank")]<-"set"
+  AUC_sets_reg$auc<-NULL
+
+  RANKS_reg<-join_all(list(AUC_sets_reg,AUC_regsets_reg,AUC_regs_reg), by = c("DB","link_mode","net_mode"))
+  RANKS_reg<-gather(RANKS_reg, "GSEA_type","Rank", c("set", "regset", "reg"))
+  
+  
+  ggplot(RANKS_reg, aes(link_mode, Rank)) + geom_boxplot(aes(fill=DB)) + 
+         geom_errorbar(data=RANKS_reg %>% group_by(link_mode) %>% dplyr::summarize( Rank = mean(Rank)),aes(x=link_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+         labs(title="Rank of all GSEA elements per graph regulator", 
+               x="Method for generating the modules",
+               y="Rank")+
+         scale_y_reverse()
+  
+  ggplot(RANKS_reg, aes(net_mode, Rank)) + geom_boxplot(aes(fill=DB)) + 
+    geom_errorbar(data=RANKS_reg %>% group_by(net_mode) %>% dplyr::summarize( Rank = mean(Rank)),aes(x=link_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of all GSEA elements per graph regulator", 
+         x="Method for generating the edges in the graph",
+         y="Rank")+
+    scale_y_reverse()
+  
+  ggplot(RANKS_edge, aes(link_mode, Rank)) + geom_boxplot(aes(fill=DB)) + 
+    geom_errorbar(data=RANKS_edge %>% group_by(link_mode) %>% dplyr::summarize( Rank = mean(Rank)),aes(x=link_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of all GSEA elements per 1K graph edges", 
+         x="Method for generating the modules",
+         y="Rank")+
+    scale_y_reverse()
+  
+  ggplot(RANKS_edge, aes(net_mode, Rank)) + geom_boxplot(aes(fill=DB)) + 
+    geom_errorbar(data=RANKS_edge %>% group_by(net_mode) %>% dplyr::summarize( Rank = mean(Rank)),aes(x=link_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of all GSEA elements per 1K graph edges", 
+         x="Method for generating the edges in the graph",
+         y="Rank")+
+    scale_y_reverse()
+  
+  #RANKS_VBSR_edge<-RANKS_edge[which(RANKS_edge$link_mode=="VBSR") , ]
+  #RANKS_VBSR_reg<-RANKS_reg[which(RANKS_reg$link_mode=="VBSR") , ]
+  
+  colnames(RANKS_edge)[which(names(RANKS_edge) == "Rank")]<-"norm_edge"
+  colnames(RANKS_reg)[which(names(RANKS_reg) == "Rank")]<-"norm_reg"
+  
+  RANKS<-join_all(list(RANKS_edge,RANKS_reg), by = c("DB","link_mode","net_mode","GSEA_type"))
+  RANKS<-gather(RANKS, "Norm_type","Rank", c("norm_edge", "norm_reg"))
+  
+  ggplot(RANKS, aes(x=net_mode, y=Rank)) + geom_boxplot(aes(fill=DB)) + 
+    geom_jitter(aes(shape=GSEA_type, color=Norm_type), size=2, width = 0.1, alpha=0.4)+
+    #geom_errorbar(data=RANKS %>% group_by(net_mode) %>% dplyr::summarize( Rank = mean(Rank)),aes(x=link_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of the AUCs for all GSEA elements under both normalizations", 
+         subtitle = "Different boxes: Method for generating the modules",
+         x="Method for generating the edges in the graph",
+         y="Rank")+
+    scale_y_reverse()+facet_grid(cols=vars(link_mode))+
+    ggsave(file="AUC_superset.pdf", width = 40, height = 20, units = "cm")
+  
+  ggplot(RANKS, aes(x=net_mode, y=Rank)) + geom_boxplot(aes(fill=net_mode), outlier.shape = NA) + 
+    geom_jitter(aes(shape=GSEA_type, color=Norm_type), size=3, width = 0.1, alpha=0.4)+
+    #geom_errorbar(data=RANKS %>% group_by(net_mode) %>% dplyr::summarize( Rank = mean(Rank)),aes(x=link_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of the AUCs for all GSEA elements under both normalizations", 
+         subtitle = "Different boxes: Pathway databases used for the enrichment test",
+         x="Method for generating the edges in the graph",
+         y="Rank")+
+    scale_y_reverse()+facet_grid(cols=vars(DB))+
+    ggsave(file="AUC_DB_net.pdf", width = 40, height = 20, units = "cm")
+  
+  ggplot(RANKS, aes(x=link_mode, y=Rank)) + geom_boxplot(aes(fill=link_mode), outlier.shape = NA) + 
+    geom_jitter(aes(shape=GSEA_type, color=Norm_type), size=3, width = 0.1, alpha=0.4)+
+    #geom_errorbar(data=RANKS %>% group_by(net_mode) %>% dplyr::summarize( Rank = mean(Rank)),aes(x=link_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of the AUCs for all GSEA elements under both normalizations", 
+         subtitle = "Different boxes: Pathway databases used for the enrichment test",
+         x="Method for generating the modules",
+         y="Rank")+
+    scale_y_reverse()+facet_grid(cols=vars(DB))+
+    ggsave(file="AUC_DB_link.pdf", width = 40, height = 20, units = "cm")
+  
+  ggplot(RANKS, aes(x=net_mode, y=Rank)) + geom_boxplot(aes(fill=net_mode), outlier.shape = NA) + 
+    geom_jitter(aes(shape=GSEA_type, color=Norm_type), size=3, width = 0.1, alpha=0.4)+
+    geom_errorbar(data=RANKS %>% group_by(net_mode, link_mode) %>% dplyr::summarize( Rank = mean(Rank)),aes(x=net_mode,ymin=Rank, ymax=Rank),width = .85, linetype = "dashed", color="red") +
+    labs(title="Rank of the AUCs for all GSEA elements under both normalizations", 
+         subtitle = "Different boxes: Method for generating the modules",
+         x="Method for generating the edges in the graph",
+         y="Rank")+
+    scale_y_reverse()+facet_grid(cols=vars(link_mode))+ggsave(file="AUC_all.pdf", width = 40, height = 20, units = "cm")
+
+  
+}
+
+
+
 
 layout.by.attr <- function(graph, wc, cluster.strength=1,layout=layout.auto) {  
   g <- graph.edgelist(get.edgelist(graph)) # create a lightweight copy of graph w/o the attributes.
