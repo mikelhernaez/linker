@@ -1,0 +1,31 @@
+type	number	name	description
+summary	1	idx	support level identifier
+summary	2	Support	number of modules identical graph edges were found in 
+summary	3	nEdges	number of graph edges with the given level of support
+summary	4	cumEdges	number of graph edges with at least the given level of support
+summary	5	%NA	percent of cumEdges that have chip evidence = NA, no chip data for the regulator or unmapped genes
+summary	6	%NoPeak	percent of cumEdges that have chip evidence = 0, no peak for the chipped regulator near target 
+summary	7	%Peaks	 percent of cumEdges that have chip evidence = 1, there exists at least one peak for the chipped regulator near target 
+edges	1	idx	gene pair edge rank
+edges	2	edgeKey	gene pair edge name
+edges	3	weight	number of bootstraps where the gene pair was found as a graph edge
+edges	4	reg-origid	gene name for regulator
+edges	5	target-origid	gene name for target
+edges	6	reg-geneid	gene identifier for regulator
+edges	7	target-geneid	gene identifier for target
+edges	8	chip-evidence	chip support (-1: no regulator chip tracks, 0: regulator chip tracks do not overlap target gene body +/- 20KB, 1: regulator chip tracks do overlap target gene body +/- 20KB)
+edges	9	num-chip-peaks	number of chipped regulator peaks in genomic region for target
+regulators	1	idx	regulator rank
+regulators	2	gid	gene name for regulator
+regulators	3	nEdges	number of total graph edges involving regulator across all bootstraps
+regulators	4	nNeigh	number of unique neighbor targets of regulator across all bootstraps
+regulators	5	nMax-Conf-Neigh	number of unique neighbor targets of regulator that have maximum support across all bootstraps
+regulators	6	topNeigh	for top 3 targets with max support, shows support and number and evidence class of chip peaks
+regulators	7	suppTable	for the highest and lowest levels of support, shows the number of level and cumulative edges with that support as well as the percentage of the culumative edges with the chip evidence specified by the column names
+targets	1	idx	target rank
+targets	2	gid	gene name for target
+targets	3	nEdges	number of total graph edges involving target across all bootstraps
+targets	4	nNeigh	number of unique neighbor regulators of target across all bootstraps
+targets	5	nMax-Conf-Neigh	number of unique neighbor regulators of target that have maximum support across all bootstraps
+targets	6	topNeigh	for top 3 regulators with max support, shows support and number and evidence class of chip peaks
+targets	7	suppTable	for the highest and lowest levels of support, shows the number of level and cumulative edges with that support as well as the percentage of the culumative edges with the chip evidence specified by the column names
