@@ -1,7 +1,7 @@
 This is the accompanying repository of the paper:
 
 # Comparison of single and module-based methods for modeling gene regulatory networks
-## by Mikel Hernaez and Olivier Gevaert
+## by Mikel Hernaez, Charles Blatti and Olivier Gevaert
 
 
 # Abstract
