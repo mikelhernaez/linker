@@ -18,6 +18,7 @@ create_index_page <- function(outdir="./", runtag="run", codedir="./",
   abspath <- paste0(htmldir, indexpath)
 
   write(paste0("<br>"), file = abspath)
+  write_html_table_page(glossary, paste0(htmldir, glossarypath), glossarypath)
 
   return(list(htmldir = htmldir, indexpath = indexpath, imgstr = imgstr,
               txtstr = txtstr, glossarypath = glossarypath, abspath = abspath))
