@@ -110,3 +110,13 @@ The data used in the paper can be downloaded from:
 ```input_script.R``` contains an example script.
 
 ```html_summary.R``` runs the `create_html_summary()` script on the sample data provided in this repo.
+
+# Changing the regression method to infer the regulatory network
+
+The code allows for an easy integration of any method that tries to approximate the expression of a target gene (or module representative) as a linear combination of few regulators.
+There are two places in ```LINKER.R``` that need to be changed:
+[When building the modules](https://github.com/mikelhernaez/linker/blob/a0d04c848f5dbfa8baf38ebe3aa015e21d2896ba/LINKER.R#L740)
+[When building the edges of the graphs](https://github.com/mikelhernaez/linker/blob/a0d04c848f5dbfa8baf38ebe3aa015e21d2896ba/LINKER.R#L740)
+
+
+
