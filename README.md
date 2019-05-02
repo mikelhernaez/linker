@@ -111,12 +111,27 @@ The data used in the paper can be downloaded from:
 
 ```html_summary.R``` runs the `create_html_summary()` script on the sample data provided in this repo.
 
-# Changing the regression method to infer the regulatory network
+# Introducing other regression method to infer the regulatory network
 
-The code allows for an easy integration of any method that tries to approximate the expression of a target gene (or module representative) as a linear combination of few regulators.
+The code allows for an easy integration of other methods that try to approximate the expression of a target gene (or module representative) as a linear combination of few regulators.
+
 There are two places in ```LINKER.R``` that need to be changed:
-[When building the modules](https://github.com/mikelhernaez/linker/blob/a0d04c848f5dbfa8baf38ebe3aa015e21d2896ba/LINKER.R#L740)
-[When building the edges of the graphs](https://github.com/mikelhernaez/linker/blob/a0d04c848f5dbfa8baf38ebe3aa015e21d2896ba/LINKER.R#L740)
+- [When building the modules](https://github.com/mikelhernaez/linker/blob/a0d04c848f5dbfa8baf38ebe3aa015e21d2896ba/LINKER.R#L740)
+- [When building the edges of the graphs](https://github.com/mikelhernaez/linker/blob/a0d04c848f5dbfa8baf38ebe3aa015e21d2896ba/LINKER.R#L740)
+
+At both places we have specified how the new function whould look like as:
 
 
-
+        ################ INTRODUCE HERE NEW METHOD FOR COMPUTING THE BETAS ################################
+        ## The method should take as argument the matrix of regulators X and the gene/eigengene y,
+        ## and ouput the regulatory program for that gene/eigenegen.
+        ## The regulatory program is a vector of weights that connects the gene with the set of regulators
+        ####################################################################################################
+        
+        # else if (mode=="HERE_YOUR_MEHTOD_NAME")
+        #{
+          #b_opt<-__your_method_funtion__(t(X), y, ...)
+          #driverMat[idx_gene,]<-b_opt
+        #}
+        #####################################################################################################
+        
