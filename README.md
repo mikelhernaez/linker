@@ -1,7 +1,7 @@
 This is the accompanying repository of the paper:
 
 # Comparison of single and module-based methods for modeling gene regulatory networks
-## by Mikel Hernaez and Olivier Gevaert
+## by Mikel Hernaez, Charles Blatti and Olivier Gevaert
 
 
 # Abstract
@@ -91,6 +91,8 @@ Where
 
 ```plot_functions.R``` contains the needed functions to generate the plots shown in the paper.
 
+```html_functions.R``` contains the needed functions to generate the html summaries of the graph edges.
+
 ```simulated_data.R``` contains the functions to generate the simulated data used in the paper and to generate the clustering evaluation plots.
 
 
@@ -101,7 +103,10 @@ The data used in the paper can be downloaded from:
  - Estimated counts and TFs indexes for TCGA OV: [Tumor_HNSC50_to_R.mat](https://github.com/mikelhernaez/linker/blob/master/data/Tumor_HNSC50_to_R.mat)
  - Estimated counts and TFs indexes for TCGA HNSC: [Tumor_OV50_to_R.mat](https://github.com/mikelhernaez/linker/blob/master/data/Tumor_OV50_to_R.mat)
  - Known Gene Sets: [GENESETDB_Collections_GeneSymbol_v11.mat](https://github.com/mikelhernaez/linker/blob/master/data/GENESETDB_Collections_GeneSymbol_v11.mat)
+ - TCGA html summaries: [OV](http://donostia.csl.illinois.edu/linker_TCGA/html_Tumor_OV50.tar8855_reg638/index.Tumor_OV50.tar8855_reg638.html) and [HNSC](http://donostia.csl.illinois.edu/linker_TCGA/html_Tumor_HNSC50.tar8791_reg702/index.Tumor_HNSC50.tar8791_reg702.html)
 
 # Example
 
 ```input_script.R``` contains an example script.
+
+```html_summary.R``` runs the `create_html_summary()` script on the sample data provided in this repo.
