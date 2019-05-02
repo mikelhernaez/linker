@@ -40,14 +40,19 @@ target_filtered_idx<-camodi_input_data$geneIdx
 regulator_filtered_idx<-camodi_input_data$regulatorIdx
 ##########################################################
 
+gene_info<-read.delim("Tumor_OV50.gene_info.txt")
+
+target_filtered_idx<-which(gene_info$regulator==0)
+regulator_filtered_idx<-which(gene_info$regulator==1)
+
 Gene_set_Collections<-pathway_genes[c(3,4,5,12)]
 #link_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
 
-testLinker<-LINKER_run(lognorm_est_counts, target_filtered_idx, regulator_filtered_idx, Gene_set_Collections,
-                           link_mode=c("LM"),
-                           graph_mode=c("VBSR", "LASSOmin", "LASSO1se", "LM"),
-                           module_rep="MEAN",
-                           NrModules=100, 
+testLinker_3<-LINKER_run(lognorm_est_counts, target_filtered_idx, regulator_filtered_idx, Gene_set_Collections,
+                           link_mode=c("VBSR"),
+                           graph_mode=c("VBSR"),
+                           module_rep="LINKER",
+                           NrModules=3, 
                            corrClustNrIter=50,
                            Nr_bootstraps=10,
                            FDR=0.05,

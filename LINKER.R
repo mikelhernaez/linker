@@ -109,24 +109,32 @@ LINKER_init <- function(MA_matrix_Var, RegulatorData, NrModules, NrCores=30, cor
     rnd_cent<-matrix()
     #First one at random
     rnd_cent<-(MA_matrix_Var[sample(1:nrow(MA_matrix_Var), 1),])
-    #the second value is the least correlated from the first one
-    corr_dists<-apply( MA_matrix_Var, 1, function(x) ( (x%*%rnd_cent)/(length(x)-1) )^2 )
-    rnd_cent<-cbind(as.matrix(rnd_cent),as.matrix(MA_matrix_Var[which(corr_dists==min(corr_dists))[1],]))
-    rnd_cent<-t(rnd_cent)
-    #compute the rest of the centers
-    Px<-numeric(length = nrow(MA_matrix_Var))
-    for(center_idx in 3:NrModules){
+    if(NrModules>0){
       
-      for(i in 1: nrow(MA_matrix_Var)){
-        gene<-MA_matrix_Var[i,]
-        corr_dists<-apply( rnd_cent, 1, function(x) ((x%*%gene)/(length(x)-1) )^2 )
-        Px[i]<-2-max(corr_dists)
+      if(NrModules>1){
+        #the second value is the least correlated from the first one
+        corr_dists<-apply( MA_matrix_Var, 1, function(x) ( (x%*%rnd_cent)/(length(x)-1) )^2 )
+        rnd_cent<-cbind(as.matrix(rnd_cent),as.matrix(MA_matrix_Var[which(corr_dists==min(corr_dists))[1],]))
+        rnd_cent<-t(rnd_cent)
+        if(NrModules>2){
+          #compute the rest of the centers
+          Px<-numeric(length = nrow(MA_matrix_Var))
+          for(center_idx in 3:NrModules){
+            
+            for(i in 1: nrow(MA_matrix_Var)){
+              gene<-MA_matrix_Var[i,]
+              corr_dists<-apply( rnd_cent, 1, function(x) ((x%*%gene)/(length(x)-1) )^2 )
+              Px[i]<-2-max(corr_dists)
+            }
+            if(sum(is.finite(Px))!= length(Px)){
+              print("asdf")
+            }
+            rnd_cent<-rbind(rnd_cent,MA_matrix_Var[sample(1:nrow(MA_matrix_Var), 1, prob = Px),])
+        }
       }
-      if(sum(is.finite(Px))!= length(Px)){
-        print("asdf")
-      }
-      rnd_cent<-rbind(rnd_cent,MA_matrix_Var[sample(1:nrow(MA_matrix_Var), 1, prob = Px),])
     }
+    
+  }
     
     
     
@@ -138,7 +146,7 @@ LINKER_init <- function(MA_matrix_Var, RegulatorData, NrModules, NrCores=30, cor
     for(jj in 1:5){
       for (i in 1:nrow(MA_matrix_Var)){
         CurrentGeneVector = Data[i,,drop=FALSE]
-        Correlations = abs(cor(t(CurrentGeneVector),t(ModuleVectors)))
+        #Correlations = abs(cor(t(CurrentGeneVector),t(ModuleVectors)))
         Correlations = (cor(t(CurrentGeneVector),t(ModuleVectors)))
         corr = data.matrix(Correlations,rownames.force = NA)
         #corr[is.na(corr)] <- -100000
@@ -462,7 +470,7 @@ LINKER_ReassignGenesToClusters <- function(Data,RegulatorData,Beta,Clusters){
     #for (i in 1:NrGenes){
     OldModule = Clusters[i]
     CurrentGeneVector = Data[i,,drop=FALSE]
-    Correlations = abs(cor(t(CurrentGeneVector),t(ModuleVectors)))
+    #Correlations = abs(cor(t(CurrentGeneVector),t(ModuleVectors)))
     Correlations = (cor(t(CurrentGeneVector),t(ModuleVectors)))
     
     corr = data.matrix(Correlations,rownames.force = NA)
@@ -493,7 +501,7 @@ LINKER_ReassignGenesToClusters <- function(Data,RegulatorData,Beta,Clusters){
       ModuleVectors[i,]<-0
       for(j in genesInModule){
         CurrentGeneVector = Data[j,,drop=FALSE]
-        Correlations = abs(cor(t(CurrentGeneVector),t(ModuleVectors)))
+        #Correlations = abs(cor(t(CurrentGeneVector),t(ModuleVectors)))
         Correlations = (cor(t(CurrentGeneVector),t(ModuleVectors)))
         
         corr = data.matrix(Correlations,rownames.force = NA)
@@ -729,6 +737,18 @@ LINKER_compute_modules_graph<-function(modules, Data, mode="VBSR",alpha=1-1e-06)
             driverMat[idx_gene,idx_regs]<-s$coefficients[2,"Pr(>|t|)"]<0.05/(length(targetgenes)*length(regulators))
           }
         }
+        ################ INTRODUCE HERE NEW METHOD FOR COMPUTING THE BETAS ################################
+        ## The method should take as argument the matrix of regulators X and the gene/eigengene y,
+        ## and ouput the regulatory program for that gene/eigenegen.
+        ## The regulatory program is a vector of weights that connects the gene with the set of regulators
+        ####################################################################################################
+        
+        # else if (mode=="HERE_YOUR_MEHTOD_NAME")
+        #{
+          #b_opt<-__your_method_funtion__(t(X), y, ...)
+          #driverMat[idx_gene,]<-b_opt
+        #}
+        #####################################################################################################
         else
         {
           warning("MODE NOT RECOGNIZED")
